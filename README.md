@@ -1,0 +1,41 @@
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+# refPanelTools
+
+<!-- badges: start -->
+<!-- badges: end -->
+
+This package provides a collection of various tools for reference panel
+datasets created for GAUSS R package.
+
+## Installation
+
+You can install the development version of refPanelTools from
+[GitHub](https://github.com/statsleelab/refPanelTools) with:
+
+``` r
+# install.packages("devtools")
+devtools::install_github("statsleelab/refPanelTools")
+```
+
+## Example
+
+This is a basic example which shows you how to extract genotype
+information for a user-specified genomic region:
+
+``` r
+library(refPanelTools)
+chr.num <- 14
+start.bp <- 104000000
+end.bp   <- 104200000
+num.pops <- 29
+ref.index.file <- "/33KG/33kg_index.gz"
+ref.data.file <- "/33KG/33kg_geno.gz"
+
+# extract genotype data of a user-specified genomic region 
+data.output <- paste0("33kg_chr",chr.num,"_reg_geno")
+extract_reg_data(chr.num, start.bp, end.bp, num.pops, 
+                 ref.index.file, ref.data.file, 
+                 data.output)
+```
