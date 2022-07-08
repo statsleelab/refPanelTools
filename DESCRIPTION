@@ -1,0 +1,11 @@
+Package: refPanelTools
+Type: Package
+Title: Tools for reference panel datasets
+Version: 1.0
+Date: 2021-11-03
+Author: Donghyung Lee
+Maintainer: Donghyung Lee <dustorm@gmail.com>
+Description: refPanelTools provides a number of tools for extracting information from whole genome sequencing reference panel datasets.
+License: GPL (>= 2)
+Imports: Rcpp (>= 1.0.7)
+LinkingTo: Rcpp
