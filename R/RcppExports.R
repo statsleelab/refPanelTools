@@ -2,26 +2,30 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 indexer <- function(reference_data_file, output_file) {
-    invisible(.Call(`_MakeRefPanel_indexer`, reference_data_file, output_file))
+    invisible(.Call(`_refPanelTools_indexer`, reference_data_file, output_file))
 }
 
 cal_af1ref <- function(reference_data_file, num_pops, output_file) {
-    invisible(.Call(`_MakeRefPanel_cal_af1ref`, reference_data_file, num_pops, output_file))
+    invisible(.Call(`_refPanelTools_cal_af1ref`, reference_data_file, num_pops, output_file))
 }
 
 extract_chr_data <- function(chr_num, num_pops, index_data_file, reference_data_file, ref_out_file) {
-    invisible(.Call(`_MakeRefPanel_extract_chr_data`, chr_num, num_pops, index_data_file, reference_data_file, ref_out_file))
+    invisible(.Call(`_refPanelTools_extract_chr_data`, chr_num, num_pops, index_data_file, reference_data_file, ref_out_file))
+}
+
+extract_reg_data <- function(chr_num, start_bp, end_bp, num_pops, index_data_file, reference_data_file, ref_out_file) {
+    invisible(.Call(`_refPanelTools_extract_reg_data`, chr_num, start_bp, end_bp, num_pops, index_data_file, reference_data_file, ref_out_file))
 }
 
 test_gz_file <- function(gz_file) {
-    invisible(.Call(`_MakeRefPanel_test_gz_file`, gz_file))
+    invisible(.Call(`_refPanelTools_test_gz_file`, gz_file))
 }
 
 get_geno_info <- function(fpos, reference_data_file) {
-    .Call(`_MakeRefPanel_get_geno_info`, fpos, reference_data_file)
+    .Call(`_refPanelTools_get_geno_info`, fpos, reference_data_file)
 }
 
 largeval <- function(val) {
-    .Call(`_MakeRefPanel_largeval`, val)
+    .Call(`_refPanelTools_largeval`, val)
 }
 

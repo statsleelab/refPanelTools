@@ -12,7 +12,7 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 
 // indexer
 void indexer(std::string reference_data_file, std::string output_file);
-RcppExport SEXP _MakeRefPanel_indexer(SEXP reference_data_fileSEXP, SEXP output_fileSEXP) {
+RcppExport SEXP _refPanelTools_indexer(SEXP reference_data_fileSEXP, SEXP output_fileSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< std::string >::type reference_data_file(reference_data_fileSEXP);
@@ -23,7 +23,7 @@ END_RCPP
 }
 // cal_af1ref
 void cal_af1ref(std::string reference_data_file, int num_pops, std::string output_file);
-RcppExport SEXP _MakeRefPanel_cal_af1ref(SEXP reference_data_fileSEXP, SEXP num_popsSEXP, SEXP output_fileSEXP) {
+RcppExport SEXP _refPanelTools_cal_af1ref(SEXP reference_data_fileSEXP, SEXP num_popsSEXP, SEXP output_fileSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< std::string >::type reference_data_file(reference_data_fileSEXP);
@@ -35,7 +35,7 @@ END_RCPP
 }
 // extract_chr_data
 void extract_chr_data(int chr_num, int num_pops, std::string index_data_file, std::string reference_data_file, std::string ref_out_file);
-RcppExport SEXP _MakeRefPanel_extract_chr_data(SEXP chr_numSEXP, SEXP num_popsSEXP, SEXP index_data_fileSEXP, SEXP reference_data_fileSEXP, SEXP ref_out_fileSEXP) {
+RcppExport SEXP _refPanelTools_extract_chr_data(SEXP chr_numSEXP, SEXP num_popsSEXP, SEXP index_data_fileSEXP, SEXP reference_data_fileSEXP, SEXP ref_out_fileSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< int >::type chr_num(chr_numSEXP);
@@ -47,9 +47,25 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// extract_reg_data
+void extract_reg_data(int chr_num, int start_bp, int end_bp, int num_pops, std::string index_data_file, std::string reference_data_file, std::string ref_out_file);
+RcppExport SEXP _refPanelTools_extract_reg_data(SEXP chr_numSEXP, SEXP start_bpSEXP, SEXP end_bpSEXP, SEXP num_popsSEXP, SEXP index_data_fileSEXP, SEXP reference_data_fileSEXP, SEXP ref_out_fileSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type chr_num(chr_numSEXP);
+    Rcpp::traits::input_parameter< int >::type start_bp(start_bpSEXP);
+    Rcpp::traits::input_parameter< int >::type end_bp(end_bpSEXP);
+    Rcpp::traits::input_parameter< int >::type num_pops(num_popsSEXP);
+    Rcpp::traits::input_parameter< std::string >::type index_data_file(index_data_fileSEXP);
+    Rcpp::traits::input_parameter< std::string >::type reference_data_file(reference_data_fileSEXP);
+    Rcpp::traits::input_parameter< std::string >::type ref_out_file(ref_out_fileSEXP);
+    extract_reg_data(chr_num, start_bp, end_bp, num_pops, index_data_file, reference_data_file, ref_out_file);
+    return R_NilValue;
+END_RCPP
+}
 // test_gz_file
 void test_gz_file(std::string gz_file);
-RcppExport SEXP _MakeRefPanel_test_gz_file(SEXP gz_fileSEXP) {
+RcppExport SEXP _refPanelTools_test_gz_file(SEXP gz_fileSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< std::string >::type gz_file(gz_fileSEXP);
@@ -59,7 +75,7 @@ END_RCPP
 }
 // get_geno_info
 std::string get_geno_info(int64_t fpos, std::string reference_data_file);
-RcppExport SEXP _MakeRefPanel_get_geno_info(SEXP fposSEXP, SEXP reference_data_fileSEXP) {
+RcppExport SEXP _refPanelTools_get_geno_info(SEXP fposSEXP, SEXP reference_data_fileSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -71,7 +87,7 @@ END_RCPP
 }
 // largeval
 Rcpp::NumericVector largeval(int64_t val);
-RcppExport SEXP _MakeRefPanel_largeval(SEXP valSEXP) {
+RcppExport SEXP _refPanelTools_largeval(SEXP valSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -82,16 +98,17 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_MakeRefPanel_indexer", (DL_FUNC) &_MakeRefPanel_indexer, 2},
-    {"_MakeRefPanel_cal_af1ref", (DL_FUNC) &_MakeRefPanel_cal_af1ref, 3},
-    {"_MakeRefPanel_extract_chr_data", (DL_FUNC) &_MakeRefPanel_extract_chr_data, 5},
-    {"_MakeRefPanel_test_gz_file", (DL_FUNC) &_MakeRefPanel_test_gz_file, 1},
-    {"_MakeRefPanel_get_geno_info", (DL_FUNC) &_MakeRefPanel_get_geno_info, 2},
-    {"_MakeRefPanel_largeval", (DL_FUNC) &_MakeRefPanel_largeval, 1},
+    {"_refPanelTools_indexer", (DL_FUNC) &_refPanelTools_indexer, 2},
+    {"_refPanelTools_cal_af1ref", (DL_FUNC) &_refPanelTools_cal_af1ref, 3},
+    {"_refPanelTools_extract_chr_data", (DL_FUNC) &_refPanelTools_extract_chr_data, 5},
+    {"_refPanelTools_extract_reg_data", (DL_FUNC) &_refPanelTools_extract_reg_data, 7},
+    {"_refPanelTools_test_gz_file", (DL_FUNC) &_refPanelTools_test_gz_file, 1},
+    {"_refPanelTools_get_geno_info", (DL_FUNC) &_refPanelTools_get_geno_info, 2},
+    {"_refPanelTools_largeval", (DL_FUNC) &_refPanelTools_largeval, 1},
     {NULL, NULL, 0}
 };
 
-RcppExport void R_init_MakeRefPanel(DllInfo *dll) {
+RcppExport void R_init_refPanelTools(DllInfo *dll) {
     R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
     R_useDynamicSymbols(dll, FALSE);
 }

@@ -1,15 +1,13 @@
-library(MakeRefPanel)
-
 #############
 ## 1KG data #
 #############
-library(MakeRefPanel)
+library(refPanelTools)
 ref.data <- "/Users/leed13/Desktop/GAUSS/ref/Human/1KG/v0.1.0/1kg_geno_af1.gz"
-output <- "/Users/leed13/Desktop/GAUSS/ref/Human/1KG/v0.1.0/fpoffset_length.txt" 
+output <- "/Users/leed13/Desktop/GAUSS/ref/Human/1KG/v0.1.0/fpoffset_length.txt"
 indexer(ref.data, output)
 
 # calculate reference allele freq of each SNP in 1KG data
-library(MakeRefPanel)
+library(refPanelTools)
 ref.data <- "/Users/leed13/Desktop/GAUSS/ref/Human/1KG/v0.1.0/1kg_geno_af1.gz"
 output <- "/Users/leed13/Desktop/GAUSS/ref/Human/1KG/v0.1.0/af1ref.txt" 
 num.pops <- 14
@@ -18,25 +16,25 @@ cal_af1ref(ref.data, num.pops, output)
 ##############
 ## 33KG data #
 ##############
-library(MakeRefPanel)
+library(refPanelTools)
 ref.data <- "/Users/leed13/Desktop/GAUSS/ref/Human/33KG/33kg_geno.gz"
 output <- "/Users/leed13/Desktop/GAUSS/ref/Human/33KG/fpoffset_length.txt" 
 indexer(ref.data, output)
 
 
 # calculate reference allele freq of each SNP in 33KG data
-library(MakeRefPanel)
+library(refPanelTools)
 ref.data <- "/Users/leed13/Desktop/GAUSS/ref/Human/33KG/33kg_geno.gz"
 output <- "/Users/leed13/Desktop/GAUSS/ref/Human/33KG/af1ref.txt" 
 num.pops <- 29
 cal_af1ref(ref.data, num.pops, output)
 
 
-###################
-## Make Chr data ##
-###################
+#####################################################
+## Make a reference panel file for each chromosome ##
+#####################################################
 library(data.table)
-library(MakeRefPanel)
+library(refPanelTools)
 #chr.num <- 20
 num.pops <- 29
 ref.index.file <- "/Users/leed13/Desktop/GAUSS/ref/Human/33KG/33kg_index.gz"
@@ -74,6 +72,28 @@ for(chr.num in 1:9){
   system(paste0("bgzip ",chr.index.file))
   system(paste0("rm ",fp.output))
 }
+
+#############################################################
+## Extract genotype data of a user-specifed genomic region ##
+#############################################################
+library(refPanelTools)
+chr.num <- 14
+start.bp <- 104000000
+end.bp   <- 104200000
+num.pops <- 29
+ref.index.file <- "/Users/leed13/Desktop/GAUSS/ref/Human/33KG/33kg_index.gz"
+ref.data.file <- "/Users/leed13/Desktop/GAUSS/ref/Human/33KG/33kg_geno.gz"
+
+# extract genotype data of a user-specified genomic region 
+data.output <- paste0("/Users/leed13/Desktop/GAUSS/ref/Human/33KG/chr_data/33kg_chr",chr.num,"_reg_geno")
+extract_reg_data(chr.num, start.bp, end.bp, num.pops, 
+                 ref.index.file, ref.data.file, 
+                 data.output)
+#system(paste0("bgzip ",data.output))
+
+
+
+
 
 
 

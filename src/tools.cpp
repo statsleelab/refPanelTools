@@ -128,6 +128,57 @@ void extract_chr_data(int chr_num,
   bgzf_close(fpd);
 }
 
+// [[Rcpp::export]]
+void extract_reg_data(int chr_num,
+                      int start_bp,
+                      int end_bp,
+                      int num_pops,
+                      std::string index_data_file,
+                      std::string reference_data_file,
+                      std::string ref_out_file){
+  
+  BGZF* fpi = bgzf_open(index_data_file.c_str(), "r");
+  if(!fpi){
+    std::cout<<std::endl;
+    Rcpp::stop("ERROR: can't open index data file '"+index_data_file+"'");
+  }
+  BGZF* fpd = bgzf_open(reference_data_file.c_str(), "r");
+  if(!fpd){
+    std::cout<<std::endl;
+    Rcpp::stop("ERROR: can't open reference data file '"+reference_data_file+"'");
+  }
+  
+  std::ofstream data_out;
+  data_out.open(ref_out_file.c_str());
+  
+  int last_char;
+  std::string index_line, data_line;
+  std::string rsid, a1, a2;
+  int chr;
+  double af1ref;
+  long long int bp, fpos;
+  
+  while(true){
+    last_char = BgzfGetLine(fpi, index_line);
+    if(last_char == -1) //EOF
+      break;
+    
+    std::istringstream buffer(index_line);
+    buffer >> rsid >> chr >> bp >> a1 >> a2 >> af1ref >> fpos;
+    
+    if(chr==chr_num && (bp >= start_bp && bp <= end_bp)){
+      bgzf_seek(fpd, fpos, SEEK_SET);
+      BgzfGetLine(fpd, data_line);
+      //write data info
+      data_out<<data_line<<std::endl;
+    }
+  }
+  data_out.close();
+  bgzf_close(fpi);
+  bgzf_close(fpd);
+}
+
+
 
 // [[Rcpp::export]]
 void test_gz_file(std::string gz_file){
