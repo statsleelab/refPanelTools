@@ -142,7 +142,10 @@ void extract_chr_pop_data(int chr_num,
     std::string pop = pop_vec[i];
     std::transform(pop.begin(), pop.end(), pop.begin(), ::toupper); //make capital
     pop_vec_input.push_back(pop);
+    //std::cout<<pop<<std::endl;
   }
+  //for(int i=0; i<pop_vec_input.size(); i++) {std::cout<<pop_vec_input[i]<<std::endl;}
+  
   
   // Read reference_pop_desc_file 
   std::string ref_desc_file = reference_pop_desc_file;
@@ -171,6 +174,11 @@ void extract_chr_pop_data(int chr_num,
   num_pops=ref_pop_vec.size();
   in_ref_desc.close();
   
+  //std::cout<<num_pops<<std::endl;
+  //for(int i=0; i<ref_pop_vec.size(); i++) {std::cout<<ref_pop_vec[i]<<std::endl;}
+  //for(int i=0; i<ref_pop_vec.size(); i++) {std::cout<<ref_pop_size_vec[i]<<std::endl;}
+  //for(int i=0; i<ref_pop_vec.size(); i++) {std::cout<<ref_sup_pop_vec[i]<<std::endl;}
+  
   // init pop_flag vector
   std::vector<int> pop_flag_vec;
   for(int i=0; i<num_pops; i++){
@@ -182,6 +190,9 @@ void extract_chr_pop_data(int chr_num,
     }
   }
   
+  //for(int i=0; i<pop_flag_vec.size(); i++) {std::cout<<pop_flag_vec[i]<<std::endl;}
+  
+
   BGZF* fpi = bgzf_open(index_data_file.c_str(), "r");
   if(!fpi){
     std::cout<<std::endl;
@@ -192,7 +203,7 @@ void extract_chr_pop_data(int chr_num,
     std::cout<<std::endl;
     Rcpp::stop("ERROR: can't open reference data file '"+reference_data_file+"'");
   }
-  
+    
   std::ofstream data_out;
   data_out.open(ref_out_file.c_str());
   
@@ -220,13 +231,13 @@ void extract_chr_pop_data(int chr_num,
       std::istringstream data_buffer(data_line);
       for(int k=0; k<num_pops; k++){
         std::string geno_str;
-        buffer >> geno_str;
+        data_buffer >> geno_str;
         if(pop_flag_vec[k])
           data_out<<geno_str<<" "; // write genotype string
       }
       for(int k=0; k<num_pops; k++){
-        double af1_pop;
-        buffer >> af1_pop;
+        std::string af1_pop;
+        data_buffer >> af1_pop;
         if(pop_flag_vec[k])
           data_out<<af1_pop<<" ";  // write af1 of each pop
       }
@@ -237,6 +248,7 @@ void extract_chr_pop_data(int chr_num,
   data_out.close();
   bgzf_close(fpi);
   bgzf_close(fpd);
+  
 }
 
 

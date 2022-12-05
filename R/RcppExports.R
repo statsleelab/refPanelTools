@@ -13,6 +13,10 @@ extract_chr_data <- function(chr_num, num_pops, index_data_file, reference_data_
     invisible(.Call(`_refPanelTools_extract_chr_data`, chr_num, num_pops, index_data_file, reference_data_file, ref_out_file))
 }
 
+extract_chr_pop_data <- function(chr_num, pop_vec, index_data_file, reference_data_file, reference_pop_desc_file, ref_out_file) {
+    invisible(.Call(`_refPanelTools_extract_chr_pop_data`, chr_num, pop_vec, index_data_file, reference_data_file, reference_pop_desc_file, ref_out_file))
+}
+
 extract_reg_data <- function(chr_num, start_bp, end_bp, num_pops, index_data_file, reference_data_file, ref_out_file) {
     invisible(.Call(`_refPanelTools_extract_reg_data`, chr_num, start_bp, end_bp, num_pops, index_data_file, reference_data_file, ref_out_file))
 }
