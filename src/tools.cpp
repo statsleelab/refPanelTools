@@ -129,6 +129,118 @@ void extract_chr_data(int chr_num,
 }
 
 // [[Rcpp::export]]
+void extract_chr_pop_data(int chr_num,
+                      std::vector<std::string> pop_vec,
+                      std::string index_data_file,
+                      std::string reference_data_file,
+                      std::string reference_pop_desc_file,
+                      std::string ref_out_file){
+  
+  // Read pop_vec and convert pops uppercase
+  std::vector<std::string> pop_vec_input;
+  for(int i=0; i<pop_vec.size(); i++){
+    std::string pop = pop_vec[i];
+    std::transform(pop.begin(), pop.end(), pop.begin(), ::toupper); //make capital
+    pop_vec_input.push_back(pop);
+  }
+  
+  // Read reference_pop_desc_file 
+  std::string ref_desc_file = reference_pop_desc_file;
+  std::ifstream in_ref_desc(ref_desc_file.c_str());
+  
+  if(!in_ref_desc){
+    Rcpp::Rcout<<std::endl;
+    Rcpp::stop("ERROR: can't open reference population description file '"+ref_desc_file+"'");
+  }
+  std::string line;
+  std::string pop_abb, sup_pop_abb;
+  int pop_num_subj;
+  std::vector<std::string> ref_pop_vec;
+  std::vector<int> ref_pop_size_vec;
+  std::vector<std::string> ref_sup_pop_vec;
+  
+  std::getline(in_ref_desc, line); //read header of input file.  
+  while(std::getline(in_ref_desc, line)){
+    std::istringstream buffer(line);
+    buffer >> pop_abb >> pop_num_subj >> sup_pop_abb;
+    ref_pop_vec.push_back(pop_abb);
+    ref_pop_size_vec.push_back(pop_num_subj);
+    ref_sup_pop_vec.push_back(sup_pop_abb);
+  }//while
+  int num_pops;
+  num_pops=ref_pop_vec.size();
+  in_ref_desc.close();
+  
+  // init pop_flag vector
+  std::vector<int> pop_flag_vec;
+  for(int i=0; i<num_pops; i++){
+    std::string pop = ref_pop_vec[i];
+    if(std::find(pop_vec_input.begin(), pop_vec_input.end(), pop)!=pop_vec_input.end()){ //if pop is found in pop_vec_input
+      pop_flag_vec.push_back(1);
+    } else {
+      pop_flag_vec.push_back(0);
+    }
+  }
+  
+  BGZF* fpi = bgzf_open(index_data_file.c_str(), "r");
+  if(!fpi){
+    std::cout<<std::endl;
+    Rcpp::stop("ERROR: can't open index data file '"+index_data_file+"'");
+  }
+  BGZF* fpd = bgzf_open(reference_data_file.c_str(), "r");
+  if(!fpd){
+    std::cout<<std::endl;
+    Rcpp::stop("ERROR: can't open reference data file '"+reference_data_file+"'");
+  }
+  
+  std::ofstream data_out;
+  data_out.open(ref_out_file.c_str());
+  
+  int last_char;
+  std::string index_line, data_line;
+  std::string rsid, a1, a2;
+  int chr;
+  double af1ref;
+  long long int bp, fpos;
+  
+  while(true){
+    last_char = BgzfGetLine(fpi, index_line);
+    if(last_char == -1) //EOF
+      break;
+    
+    std::istringstream buffer(index_line);
+    buffer >> rsid >> chr >> bp >> a1 >> a2 >> af1ref >> fpos;
+    
+    if(chr==chr_num){
+      bgzf_seek(fpd, fpos, SEEK_SET);
+      last_char = BgzfGetLine(fpd, data_line);      
+      if(last_char == -1) //EOF
+        break;
+      
+      std::istringstream data_buffer(data_line);
+      for(int k=0; k<num_pops; k++){
+        std::string geno_str;
+        buffer >> geno_str;
+        if(pop_flag_vec[k])
+          data_out<<geno_str<<" "; // write genotype string
+      }
+      for(int k=0; k<num_pops; k++){
+        double af1_pop;
+        buffer >> af1_pop;
+        if(pop_flag_vec[k])
+          data_out<<af1_pop<<" ";  // write af1 of each pop
+      }
+      //write data info
+      data_out<<std::endl;
+    }
+  }
+  data_out.close();
+  bgzf_close(fpi);
+  bgzf_close(fpd);
+}
+
+
+// [[Rcpp::export]]
 void extract_reg_data(int chr_num,
                       int start_bp,
                       int end_bp,
