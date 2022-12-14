@@ -117,6 +117,42 @@ chr22 <- fread(data.output, sep=" ", colClasses = 'character')
 dim(chr22)
 
 
+##########################################################
+## Simulate SNP allele frequencies of multi-ethnic GWAS ##
+##########################################################
+library(refPanelTools)
+chr.num <- 1
+ref.index.file <- "/Users/leed13/Desktop/GAUSS/ref/Human/33KG/33kg_index.gz"
+ref.data.file <- "/Users/leed13/Desktop/GAUSS/ref/Human/33KG/33kg_geno.gz"
+ref.desc.file <- "/Users/leed13/Desktop/GAUSS/ref/Human/33KG/33kg_pop_desc.txt"
+#pop.vec <- c("CCE","CEU")
+pop.vec <- c("BEB","CLM")
+pop.num.vec <- c(10,10)
+
+data.output <- paste0("/Users/leed13/Desktop/GAUSS/ref/Human/33KG/test/33kg_chr",chr.num,"_CCE_CEU_sim_af1.txt")
+simulate_af1(chr.num, 
+             pop.vec, 
+             pop.num.vec,
+             ref.index.file, 
+             ref.data.file,
+             ref.desc.file,
+             data.output)
+
+library(data.table)
+chr22 <- fread(data.output, sep=" ", header=TRUE)
+dim(chr22)
+
+library(gauss)
+wgt.df <- cal_pop_wgt(input_file=data.output,
+                      reference_index_file = ref.index.file,
+                      reference_data_file = ref.data.file,
+                      reference_pop_desc_file = ref.desc.file,
+                      interval=1000)
+wgt.df
+
+new.wgt <- subset(wgt.df, wgt>0.01)
+sum(new.wgt$wgt)
+
 
 
 

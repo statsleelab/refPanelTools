@@ -334,6 +334,7 @@ void simulate_af1(int chr_num,
   
   std::ofstream data_out;
   data_out.open(ref_out_file.c_str());
+  data_out<<"rsid chr bp a1 a2 sim_af1"<<std::endl;
   
   int last_char;
   std::string index_line, data_line;
@@ -345,6 +346,7 @@ void simulate_af1(int chr_num,
   std::random_device rd;
   std::mt19937 gen(rd());
   
+  int test_counter = 0;
   while(true){
     last_char = BgzfGetLine(fpi, index_line);
     if(last_char == -1) //EOF
@@ -356,21 +358,31 @@ void simulate_af1(int chr_num,
     double sim_af1=0.0;
     double allele_counter=0.0;
     if(chr==chr_num){
+      
+      //if(test_counter>5){
+      //  break;
+      //}
+      //test_counter++;
+      
       bgzf_seek(fpd, fpos, SEEK_SET);
       last_char = BgzfGetLine(fpd, data_line);      
       if(last_char == -1) //EOF
         break;
       
       std::istringstream data_buffer(data_line);
+      int pop_counter=0;
       for(int k=0; k<num_pops; k++){
         std::string geno_str;
         data_buffer >> geno_str;
         if(pop_flag_vec[k]) {
-          for(int j=0; j<num_sim_vec.size(); j++){
+          //std::cout<<geno_str<<std::endl;
+          for(int j=0; j<num_sim_vec[pop_counter]; j++){
             std::uniform_int_distribution<> dis(0, ref_pop_size_vec[k] - 1);
             int ran_index = dis(gen);
             allele_counter += (double)(geno_str[ran_index]-'0');
+            //std::cout<<ran_index<<" "<<(double)(geno_str[ran_index]-'0')<<std::endl;
           }
+          pop_counter++;
         }
       }
       // compute af1 of simulated genotype
