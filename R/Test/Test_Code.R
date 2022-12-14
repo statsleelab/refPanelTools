@@ -96,14 +96,14 @@ extract_reg_data(chr.num, start.bp, end.bp, num.pops,
 ## Extract genotype and allele frequency data of specific populations ##
 ########################################################################
 library(refPanelTools)
-chr.num <- 1
+chr.num <- 22
 ref.index.file <- "/Users/leed13/Desktop/GAUSS/ref/Human/33KG/33kg_index.gz"
 ref.data.file <- "/Users/leed13/Desktop/GAUSS/ref/Human/33KG/33kg_geno.gz"
 ref.desc.file <- "/Users/leed13/Desktop/GAUSS/ref/Human/33KG/33kg_pop_desc.txt"
-pop.vec <- c("BEB","CDX")
+pop.vec <- c("CCE","CEU")
 
 # extract genotype data of a user-specified genomic region 
-data.output <- paste0("/Users/leed13/Desktop/GAUSS/ref/Human/33KG/test/33kg_chr",chr.num,"_BEB_CDX.txt")
+data.output <- paste0("/Users/leed13/Desktop/GAUSS/ref/Human/33KG/test/33kg_chr",chr.num,"_CCE_CEU.txt")
 extract_chr_pop_data(chr.num, 
                      pop.vec, 
                      ref.index.file, 
@@ -113,8 +113,8 @@ extract_chr_pop_data(chr.num,
 
 
 library(data.table)
-chr1 <- fread(data.output, sep=" ", colClasses = 'character')
-dim(chr1)
+chr22 <- fread(data.output, sep=" ", colClasses = 'character')
+dim(chr22)
 
 
 
