@@ -379,7 +379,6 @@ void simulate_af1(int chr_num,
       // write results in file
       data_out<<rsid<<" "<<chr<<" "<<bp<<" "<<a1<<" "<<a2<<" ";
       data_out<<std::setprecision(5)<<std::fixed<<af1ref<<std::endl;
-      data_out<<std::endl;
     }
   }
   data_out.close();
