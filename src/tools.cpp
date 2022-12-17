@@ -268,11 +268,8 @@ void simulate_af1(int chr_num,
     std::string pop = pop_vec[i];
     std::transform(pop.begin(), pop.end(), pop.begin(), ::toupper); //make capital
     pop_vec_input.push_back(pop);
-    //std::cout<<pop<<std::endl;
   }
-  //for(int i=0; i<pop_vec_input.size(); i++) {std::cout<<pop_vec_input[i]<<std::endl;}
-  
-  
+
   // Read reference_pop_desc_file 
   std::string ref_desc_file = reference_pop_desc_file;
   std::ifstream in_ref_desc(ref_desc_file.c_str());
@@ -300,40 +297,40 @@ void simulate_af1(int chr_num,
   num_pops=ref_pop_vec.size();
   in_ref_desc.close();
   
-  //std::cout<<num_pops<<std::endl;
-  //for(int i=0; i<ref_pop_vec.size(); i++) {std::cout<<ref_pop_vec[i]<<std::endl;}
-  //for(int i=0; i<ref_pop_vec.size(); i++) {std::cout<<ref_pop_size_vec[i]<<std::endl;}
-  //for(int i=0; i<ref_pop_vec.size(); i++) {std::cout<<ref_sup_pop_vec[i]<<std::endl;}
-  
   // init pop_flag vector
   std::vector<int> pop_flag_vec;
-  int total_num_subj=0;
   for(int i=0; i<num_pops; i++){
     std::string pop = ref_pop_vec[i];
     if(std::find(pop_vec_input.begin(), pop_vec_input.end(), pop)!=pop_vec_input.end()){ //if pop is found in pop_vec_input
       pop_flag_vec.push_back(1);
-      total_num_subj += ref_pop_size_vec[i];
     } else {
       pop_flag_vec.push_back(0);
     }
   }
   
-  //for(int i=0; i<pop_flag_vec.size(); i++) {std::cout<<pop_flag_vec[i]<<std::endl;}
+  // total number of bootstrap samples
+  int total_num_subj=0;
+  for(int i=0; i<num_sim_vec.size();i++){
+    total_num_subj += num_sim_vec[i];
+  }
   
-  
+  // open reference panel index data
   BGZF* fpi = bgzf_open(index_data_file.c_str(), "r");
   if(!fpi){
     std::cout<<std::endl;
     Rcpp::stop("ERROR: can't open index data file '"+index_data_file+"'");
   }
+  // open reference panel genotype data
   BGZF* fpd = bgzf_open(reference_data_file.c_str(), "r");
   if(!fpd){
     std::cout<<std::endl;
     Rcpp::stop("ERROR: can't open reference data file '"+reference_data_file+"'");
   }
   
+  // open output file
   std::ofstream data_out;
   data_out.open(ref_out_file.c_str());
+  // write header
   data_out<<"rsid chr bp a1 a2 sim_af1"<<std::endl;
   
   int last_char;
@@ -346,7 +343,6 @@ void simulate_af1(int chr_num,
   std::random_device rd;
   std::mt19937 gen(rd());
   
-  int test_counter = 0;
   while(true){
     last_char = BgzfGetLine(fpi, index_line);
     if(last_char == -1) //EOF
@@ -359,11 +355,6 @@ void simulate_af1(int chr_num,
     double allele_counter=0.0;
     if(chr==chr_num){
       
-      //if(test_counter>5){
-      //  break;
-      //}
-      //test_counter++;
-      
       bgzf_seek(fpd, fpos, SEEK_SET);
       last_char = BgzfGetLine(fpd, data_line);      
       if(last_char == -1) //EOF
@@ -375,12 +366,10 @@ void simulate_af1(int chr_num,
         std::string geno_str;
         data_buffer >> geno_str;
         if(pop_flag_vec[k]) {
-          //std::cout<<geno_str<<std::endl;
           for(int j=0; j<num_sim_vec[pop_counter]; j++){
             std::uniform_int_distribution<> dis(0, ref_pop_size_vec[k] - 1);
             int ran_index = dis(gen);
             allele_counter += (double)(geno_str[ran_index]-'0');
-            //std::cout<<ran_index<<" "<<(double)(geno_str[ran_index]-'0')<<std::endl;
           }
           pop_counter++;
         }
@@ -390,7 +379,7 @@ void simulate_af1(int chr_num,
       sim_af1 = std::ceil(sim_af1*100000.0)/100000.0;  //round up to 5 decimal places
       // write results in file
       data_out<<rsid<<" "<<chr<<" "<<bp<<" "<<a1<<" "<<a2<<" ";
-      data_out<<std::setprecision(5)<<std::fixed<<af1ref<<std::endl;
+      data_out<<std::setprecision(5)<<std::fixed<<sim_af1<<std::endl;
     }
   }
   data_out.close();
