@@ -62,6 +62,20 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// extract_all_af1
+void extract_all_af1(int chr_num, std::string index_data_file, std::string reference_data_file, std::string reference_pop_desc_file, std::string ref_out_file);
+RcppExport SEXP _refPanelTools_extract_all_af1(SEXP chr_numSEXP, SEXP index_data_fileSEXP, SEXP reference_data_fileSEXP, SEXP reference_pop_desc_fileSEXP, SEXP ref_out_fileSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type chr_num(chr_numSEXP);
+    Rcpp::traits::input_parameter< std::string >::type index_data_file(index_data_fileSEXP);
+    Rcpp::traits::input_parameter< std::string >::type reference_data_file(reference_data_fileSEXP);
+    Rcpp::traits::input_parameter< std::string >::type reference_pop_desc_file(reference_pop_desc_fileSEXP);
+    Rcpp::traits::input_parameter< std::string >::type ref_out_file(ref_out_fileSEXP);
+    extract_all_af1(chr_num, index_data_file, reference_data_file, reference_pop_desc_file, ref_out_file);
+    return R_NilValue;
+END_RCPP
+}
 // simulate_af1
 void simulate_af1(int chr_num, std::vector<std::string> pop_vec, std::vector<int> num_sim_vec, std::string index_data_file, std::string reference_data_file, std::string reference_pop_desc_file, std::string ref_out_file);
 RcppExport SEXP _refPanelTools_simulate_af1(SEXP chr_numSEXP, SEXP pop_vecSEXP, SEXP num_sim_vecSEXP, SEXP index_data_fileSEXP, SEXP reference_data_fileSEXP, SEXP reference_pop_desc_fileSEXP, SEXP ref_out_fileSEXP) {
@@ -133,6 +147,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_refPanelTools_cal_af1ref", (DL_FUNC) &_refPanelTools_cal_af1ref, 3},
     {"_refPanelTools_extract_chr_data", (DL_FUNC) &_refPanelTools_extract_chr_data, 5},
     {"_refPanelTools_extract_chr_pop_data", (DL_FUNC) &_refPanelTools_extract_chr_pop_data, 6},
+    {"_refPanelTools_extract_all_af1", (DL_FUNC) &_refPanelTools_extract_all_af1, 5},
     {"_refPanelTools_simulate_af1", (DL_FUNC) &_refPanelTools_simulate_af1, 7},
     {"_refPanelTools_extract_reg_data", (DL_FUNC) &_refPanelTools_extract_reg_data, 7},
     {"_refPanelTools_test_gz_file", (DL_FUNC) &_refPanelTools_test_gz_file, 1},

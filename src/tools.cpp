@@ -145,8 +145,6 @@ void extract_chr_pop_data(int chr_num,
     pop_vec_input.push_back(pop);
     //std::cout<<pop<<std::endl;
   }
-  //for(int i=0; i<pop_vec_input.size(); i++) {std::cout<<pop_vec_input[i]<<std::endl;}
-  
   
   // Read reference_pop_desc_file 
   std::string ref_desc_file = reference_pop_desc_file;
@@ -175,11 +173,6 @@ void extract_chr_pop_data(int chr_num,
   num_pops=ref_pop_vec.size();
   in_ref_desc.close();
   
-  //std::cout<<num_pops<<std::endl;
-  //for(int i=0; i<ref_pop_vec.size(); i++) {std::cout<<ref_pop_vec[i]<<std::endl;}
-  //for(int i=0; i<ref_pop_vec.size(); i++) {std::cout<<ref_pop_size_vec[i]<<std::endl;}
-  //for(int i=0; i<ref_pop_vec.size(); i++) {std::cout<<ref_sup_pop_vec[i]<<std::endl;}
-  
   // init pop_flag vector
   std::vector<int> pop_flag_vec;
   for(int i=0; i<num_pops; i++){
@@ -191,9 +184,6 @@ void extract_chr_pop_data(int chr_num,
     }
   }
   
-  //for(int i=0; i<pop_flag_vec.size(); i++) {std::cout<<pop_flag_vec[i]<<std::endl;}
-  
-
   BGZF* fpi = bgzf_open(index_data_file.c_str(), "r");
   if(!fpi){
     std::cout<<std::endl;
@@ -251,6 +241,95 @@ void extract_chr_pop_data(int chr_num,
   bgzf_close(fpd);
   
 }
+
+// [[Rcpp::export]]
+void extract_all_af1(int chr_num,
+                     std::string index_data_file,
+                     std::string reference_data_file,
+                     std::string reference_pop_desc_file,
+                     std::string ref_out_file){
+  
+  // Read reference_pop_desc_file 
+  std::string ref_desc_file = reference_pop_desc_file;
+  std::ifstream in_ref_desc(ref_desc_file.c_str());
+  
+  if(!in_ref_desc){
+    Rcpp::Rcout<<std::endl;
+    Rcpp::stop("ERROR: can't open reference population description file '"+ref_desc_file+"'");
+  }
+  std::string line;
+  std::string pop_abb, sup_pop_abb;
+  int pop_num_subj;
+  std::vector<std::string> ref_pop_vec;
+  std::vector<int> ref_pop_size_vec;
+  std::vector<std::string> ref_sup_pop_vec;
+  
+  std::getline(in_ref_desc, line); //read header of input file.  
+  while(std::getline(in_ref_desc, line)){
+    std::istringstream buffer(line);
+    buffer >> pop_abb >> pop_num_subj >> sup_pop_abb;
+    ref_pop_vec.push_back(pop_abb);
+    ref_pop_size_vec.push_back(pop_num_subj);
+    ref_sup_pop_vec.push_back(sup_pop_abb);
+  }//while
+  int num_pops;
+  num_pops=ref_pop_vec.size();
+  in_ref_desc.close();
+  
+  BGZF* fpi = bgzf_open(index_data_file.c_str(), "r");
+  if(!fpi){
+    std::cout<<std::endl;
+    Rcpp::stop("ERROR: can't open index data file '"+index_data_file+"'");
+  }
+  BGZF* fpd = bgzf_open(reference_data_file.c_str(), "r");
+  if(!fpd){
+    std::cout<<std::endl;
+    Rcpp::stop("ERROR: can't open reference data file '"+reference_data_file+"'");
+  }
+  
+  std::ofstream data_out;
+  data_out.open(ref_out_file.c_str());
+  
+  int last_char;
+  std::string index_line, data_line;
+  std::string rsid, a1, a2;
+  int chr;
+  double af1ref;
+  long long int bp, fpos;
+  
+  while(true){
+    last_char = BgzfGetLine(fpi, index_line);
+    if(last_char == -1) //EOF
+      break;
+    
+    std::istringstream buffer(index_line);
+    buffer >> rsid >> chr >> bp >> a1 >> a2 >> af1ref >> fpos;
+    
+    if(chr==chr_num){
+      bgzf_seek(fpd, fpos, SEEK_SET);
+      last_char = BgzfGetLine(fpd, data_line);      
+      if(last_char == -1) //EOF
+        break;
+      
+      std::istringstream data_buffer(data_line);
+      for(int k=0; k<num_pops; k++){
+        std::string geno_str;
+        data_buffer >> geno_str; //skip genotypes
+      }
+      for(int k=0; k<num_pops; k++){
+        std::string af1_pop;
+        data_buffer >> af1_pop;
+        data_out<<af1_pop<<" ";  // write af1 of each pop
+      }
+      //write data info
+      data_out<<std::endl;
+    }
+  }
+  data_out.close();
+  bgzf_close(fpi);
+  bgzf_close(fpd);
+}
+
 
 
 // [[Rcpp::export]]
@@ -382,9 +461,9 @@ void simulate_af1(int chr_num,
       data_out<<std::setprecision(5)<<std::fixed<<sim_af1<<std::endl;
     }
   }
-  data_out.close();
-  bgzf_close(fpi);
-  bgzf_close(fpd);
+  data_out.close(); //close output filestream
+  bgzf_close(fpi);  //close reference index file
+  bgzf_close(fpd);  //close reference data file
   
 }
 

@@ -17,6 +17,10 @@ extract_chr_pop_data <- function(chr_num, pop_vec, index_data_file, reference_da
     invisible(.Call(`_refPanelTools_extract_chr_pop_data`, chr_num, pop_vec, index_data_file, reference_data_file, reference_pop_desc_file, ref_out_file))
 }
 
+extract_all_af1 <- function(chr_num, index_data_file, reference_data_file, reference_pop_desc_file, ref_out_file) {
+    invisible(.Call(`_refPanelTools_extract_all_af1`, chr_num, index_data_file, reference_data_file, reference_pop_desc_file, ref_out_file))
+}
+
 simulate_af1 <- function(chr_num, pop_vec, num_sim_vec, index_data_file, reference_data_file, reference_pop_desc_file, ref_out_file) {
     invisible(.Call(`_refPanelTools_simulate_af1`, chr_num, pop_vec, num_sim_vec, index_data_file, reference_data_file, reference_pop_desc_file, ref_out_file))
 }

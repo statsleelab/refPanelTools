@@ -117,6 +117,29 @@ chr22 <- fread(data.output, sep=" ", colClasses = 'character')
 dim(chr22)
 
 
+####################################################################
+## Extract allele frequency data of all ethnic groups populations ##
+####################################################################
+library(refPanelTools)
+chr.num <- 22
+ref.index.file <- "/Users/leed13/Desktop/GAUSS/ref/Human/33KG/33kg_index.gz"
+ref.data.file <- "/Users/leed13/Desktop/GAUSS/ref/Human/33KG/33kg_geno.gz"
+ref.desc.file <- "/Users/leed13/Desktop/GAUSS/ref/Human/33KG/33kg_pop_desc.txt"
+
+# extract af1 of all ethnic groups 
+data.output <- paste0("/Users/leed13/Desktop/GAUSS/ref/Human/33KG/test/33kg_chr",chr.num,"_af1.txt")
+extract_all_af1(chr.num, 
+                ref.index.file, 
+                ref.data.file,
+                ref.desc.file,
+                data.output)
+
+
+library(data.table)
+chr22 <- fread(data.output, sep=" ", colClasses = 'character')
+dim(chr22)
+
+
 ##########################################################
 ## Simulate SNP allele frequencies of multi-ethnic GWAS ##
 ##########################################################
