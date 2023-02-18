@@ -148,15 +148,17 @@ chr.num <- 22
 ref.index.file <- "/Users/leed13/Desktop/GAUSS/ref/Human/33KG/33kg_index.gz"
 ref.data.file <- "/Users/leed13/Desktop/GAUSS/ref/Human/33KG/33kg_geno.gz"
 ref.desc.file <- "/Users/leed13/Desktop/GAUSS/ref/Human/33KG/33kg_pop_desc.txt"
+
 pop.vec <- c("CCE","CEU")
-pop.num.vec <- c(8000,2000)
+pop.num.vec <- c(5000,5000)
+#pop.num.vec <- c(90000,10000)
 
 #pop.vec <- c("BEB","CLM")
 #pop.num.vec <- c(10,10)
 
-data.output <- paste0("/Users/leed13/Desktop/GAUSS/ref/Human/33KG/test/33kg_chr",chr.num,"_",pop.vec[1],"_",pop.vec[2],"_",pop.num.vec[1],"_",pop.num.vec[2],"_sim_af1.txt")
+data.output <- paste0("/Users/leed13/Desktop/GAUSS/ref/Human/33KG/test/33kg_chr",chr.num,"_",pop.vec[1],"_",pop.vec[2],"_",pop.num.vec[1],"_",pop.num.vec[2],"_sim_af1_sim_z.txt")
 data.output
-simulate_af1(chr.num, 
+simulate_af1_z(chr.num, 
              pop.vec, 
              pop.num.vec,
              ref.index.file, 
@@ -169,17 +171,43 @@ chr22 <- fread(data.output, sep=" ", header=TRUE)
 head(chr22)
 dim(chr22)
 
+
+hist(chr22$sim_z)
+plot(chr22$sim_af1, chr22$sim_z)
+#plot(chr22$sim_af1, chr22$beta1)
+#plot(chr22$sim_af1, chr22$beta0)
+#plot(chr22$sim_af1, chr22$std_err)
+#plot(chr22$sim_af1, chr22$mse)
+#plot(chr22$sim_af1, chr22$sxy)
+#plot(chr22$sim_af1, chr22$sxx)
+
+
+
+
 library(gauss)
-wgt.df <- cal_pop_wgt(input_file=data.output,
+
+wgt.df1 <- cal_pop_wgt(input_file=data.output,
                       reference_index_file = ref.index.file,
                       reference_data_file = ref.data.file,
                       reference_pop_desc_file = ref.desc.file,
                       interval=10)
-wgt.df
 
-new.wgt <- subset(wgt.df, wgt>0.01)
-new.wgt
-sum(new.wgt$wgt)
+wgt.df2 <- cpw2(input_file=data.output,
+                      reference_index_file = ref.index.file,
+                      reference_data_file = ref.data.file,
+                      reference_pop_desc_file = ref.desc.file,
+                      interval=10)
+
+
+wgt.df1
+wgt.df2
+
+new.wgt1 <- subset(wgt.df1, wgt>0.01)
+new.wgt2 <- subset(wgt.df2, wgt>0.01)
+new.wgt1
+new.wgt2
+sum(new.wgt1$wgt)
+sum(new.wgt2$wgt)
 
 
 #pop   wgt
@@ -188,3 +216,7 @@ sum(new.wgt$wgt)
 #3 CEU 0.391
 #4 CSE 0.044
 #8 ORK 0.105
+
+
+
+

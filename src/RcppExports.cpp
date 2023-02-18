@@ -76,9 +76,9 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
-// simulate_af1
-void simulate_af1(int chr_num, std::vector<std::string> pop_vec, std::vector<int> num_sim_vec, std::string index_data_file, std::string reference_data_file, std::string reference_pop_desc_file, std::string ref_out_file);
-RcppExport SEXP _refPanelTools_simulate_af1(SEXP chr_numSEXP, SEXP pop_vecSEXP, SEXP num_sim_vecSEXP, SEXP index_data_fileSEXP, SEXP reference_data_fileSEXP, SEXP reference_pop_desc_fileSEXP, SEXP ref_out_fileSEXP) {
+// simulate_af1_z
+void simulate_af1_z(int chr_num, std::vector<std::string> pop_vec, std::vector<int> num_sim_vec, std::string index_data_file, std::string reference_data_file, std::string reference_pop_desc_file, std::string ref_out_file);
+RcppExport SEXP _refPanelTools_simulate_af1_z(SEXP chr_numSEXP, SEXP pop_vecSEXP, SEXP num_sim_vecSEXP, SEXP index_data_fileSEXP, SEXP reference_data_fileSEXP, SEXP reference_pop_desc_fileSEXP, SEXP ref_out_fileSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< int >::type chr_num(chr_numSEXP);
@@ -88,7 +88,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< std::string >::type reference_data_file(reference_data_fileSEXP);
     Rcpp::traits::input_parameter< std::string >::type reference_pop_desc_file(reference_pop_desc_fileSEXP);
     Rcpp::traits::input_parameter< std::string >::type ref_out_file(ref_out_fileSEXP);
-    simulate_af1(chr_num, pop_vec, num_sim_vec, index_data_file, reference_data_file, reference_pop_desc_file, ref_out_file);
+    simulate_af1_z(chr_num, pop_vec, num_sim_vec, index_data_file, reference_data_file, reference_pop_desc_file, ref_out_file);
     return R_NilValue;
 END_RCPP
 }
@@ -141,6 +141,15 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// simulate_zscore
+void simulate_zscore();
+RcppExport SEXP _refPanelTools_simulate_zscore() {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    simulate_zscore();
+    return R_NilValue;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_refPanelTools_indexer", (DL_FUNC) &_refPanelTools_indexer, 2},
@@ -148,11 +157,12 @@ static const R_CallMethodDef CallEntries[] = {
     {"_refPanelTools_extract_chr_data", (DL_FUNC) &_refPanelTools_extract_chr_data, 5},
     {"_refPanelTools_extract_chr_pop_data", (DL_FUNC) &_refPanelTools_extract_chr_pop_data, 6},
     {"_refPanelTools_extract_all_af1", (DL_FUNC) &_refPanelTools_extract_all_af1, 5},
-    {"_refPanelTools_simulate_af1", (DL_FUNC) &_refPanelTools_simulate_af1, 7},
+    {"_refPanelTools_simulate_af1_z", (DL_FUNC) &_refPanelTools_simulate_af1_z, 7},
     {"_refPanelTools_extract_reg_data", (DL_FUNC) &_refPanelTools_extract_reg_data, 7},
     {"_refPanelTools_test_gz_file", (DL_FUNC) &_refPanelTools_test_gz_file, 1},
     {"_refPanelTools_get_geno_info", (DL_FUNC) &_refPanelTools_get_geno_info, 2},
     {"_refPanelTools_largeval", (DL_FUNC) &_refPanelTools_largeval, 1},
+    {"_refPanelTools_simulate_zscore", (DL_FUNC) &_refPanelTools_simulate_zscore, 0},
     {NULL, NULL, 0}
 };
 

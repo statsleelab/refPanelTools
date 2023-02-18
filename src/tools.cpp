@@ -6,6 +6,12 @@
 #include <fstream>
 #include <random>
 
+#include <iostream>
+#include <cmath>
+#include <gsl/gsl_cdf.h>
+#include <gsl/gsl_rng.h>
+#include <gsl/gsl_randist.h>
+
 using namespace Rcpp;
 
 int BgzfGetLine(BGZF* fp, std::string& line);
@@ -333,7 +339,7 @@ void extract_all_af1(int chr_num,
 
 
 // [[Rcpp::export]]
-void simulate_af1(int chr_num,
+void simulate_af1_z(int chr_num,
                   std::vector<std::string> pop_vec,
                   std::vector<int> num_sim_vec,
                   std::string index_data_file,
@@ -410,7 +416,8 @@ void simulate_af1(int chr_num,
   std::ofstream data_out;
   data_out.open(ref_out_file.c_str());
   // write header
-  data_out<<"rsid chr bp a1 a2 sim_af1"<<std::endl;
+  data_out<<"rsid chr bp a1 a2 sim_af1 sim_z"<<std::endl;
+  //data_out<<"rsid chr bp a1 a2 sim_af1 beta1 beta0 mse sxy sxx std_err sim_z"<<std::endl;
   
   int last_char;
   std::string index_line, data_line;
@@ -422,6 +429,20 @@ void simulate_af1(int chr_num,
   std::random_device rd;
   std::mt19937 gen(rd());
   
+  // Simulate response variable (standard normal variates)
+  std::vector<double> response; // Used to simulate association z-scores.
+  const gsl_rng_type* T;
+  gsl_rng* rng;
+  gsl_rng_env_setup();
+  T = gsl_rng_default;
+  rng = gsl_rng_alloc(T);
+  for (int i = 0; i < total_num_subj; i++) {
+    double z = gsl_ran_ugaussian(rng);
+    response.push_back(z);
+  }
+  gsl_rng_free(rng);
+  
+  
   while(true){
     last_char = BgzfGetLine(fpi, index_line);
     if(last_char == -1) //EOF
@@ -430,7 +451,6 @@ void simulate_af1(int chr_num,
     std::istringstream buffer(index_line);
     buffer >> rsid >> chr >> bp >> a1 >> a2 >> af1ref >> fpos;
     
-    double sim_af1=0.0;
     double allele_counter=0.0;
     if(chr==chr_num){
       
@@ -440,6 +460,7 @@ void simulate_af1(int chr_num,
         break;
       
       std::istringstream data_buffer(data_line);
+      std::vector<double> geno_vec;
       int pop_counter=0;
       for(int k=0; k<num_pops; k++){
         std::string geno_str;
@@ -448,17 +469,50 @@ void simulate_af1(int chr_num,
           for(int j=0; j<num_sim_vec[pop_counter]; j++){
             std::uniform_int_distribution<> dis(0, ref_pop_size_vec[k] - 1);
             int ran_index = dis(gen);
-            allele_counter += (double)(geno_str[ran_index]-'0');
+            double geno = (double)(geno_str[ran_index] - '0');
+            allele_counter += geno;
+            geno_vec.push_back(geno);
           }
           pop_counter++;
         }
       }
       // compute af1 of simulated genotype
-      sim_af1 = allele_counter/(2*total_num_subj);
+      double sim_af1 = allele_counter/(2*total_num_subj);
       sim_af1 = std::ceil(sim_af1*100000.0)/100000.0;  //round up to 5 decimal places
+      
+      // Compute association Z-score using simulated genotype and phenotype under null
+      // Calculate the least square estimators of beta0 and beta1
+      double x_mean = accumulate(geno_vec.begin(), geno_vec.end(), 0.0) / geno_vec.size();
+      double y_mean = accumulate(response.begin(), response.end(), 0.0) / response.size();
+      double sum_xy = inner_product(geno_vec.begin(), geno_vec.end(), response.begin(), 0.0);
+      double sum_xx = inner_product(geno_vec.begin(), geno_vec.end(), geno_vec.begin(), 0.0);
+      double sxy = sum_xy - geno_vec.size() * x_mean * y_mean;
+      double sxx = sum_xx - geno_vec.size() * pow(x_mean, 2);
+      double beta1 = sxy/sxx;
+      double beta0 = y_mean - beta1 * x_mean;
+      
+      // Calculate the standard error of beta1
+      double sum_residuals_squared = 0;
+      for (int i = 0; i < geno_vec.size(); i++) {
+        double residual = response[i] - (beta0 + beta1 * geno_vec[i]);
+        sum_residuals_squared += pow(residual, 2);
+      }
+      double mse = sum_residuals_squared / (geno_vec.size() - 2);
+      double std_err = sqrt(mse/sxx);
+      
+      // Calculate two-sided z-score for the regression coefficient
+      double sim_z = beta1 / std_err;
+      sim_z = std::ceil(sim_z*100000.0)/100000.0;  //round up to 5 decimal places  
       // write results in file
       data_out<<rsid<<" "<<chr<<" "<<bp<<" "<<a1<<" "<<a2<<" ";
-      data_out<<std::setprecision(5)<<std::fixed<<sim_af1<<std::endl;
+      data_out<<std::setprecision(5)<<std::fixed<<sim_af1<<" ";
+      //data_out<<std::setprecision(5)<<std::fixed<<beta1<<" ";
+      //data_out<<std::setprecision(5)<<std::fixed<<beta0<<" ";
+      //data_out<<std::setprecision(5)<<std::fixed<<mse<<" ";
+      //data_out<<std::setprecision(5)<<std::fixed<<sxy<<" ";
+      //data_out<<std::setprecision(5)<<std::fixed<<sxx<<" ";
+      //data_out<<std::setprecision(5)<<std::fixed<<std_err<<" ";
+      data_out<<std::setprecision(5)<<std::fixed<<sim_z<<std::endl;
     }
   }
   data_out.close(); //close output filestream
@@ -605,5 +659,57 @@ void LoadProgressBar( int percent ){
     }
   }
   std::cout<< "\r" <<percent << "%  " <<"[" << bar << "] " <<std::flush;
+}
+
+
+// [[Rcpp::export]]
+void simulate_zscore(){
+  // Initialize vectors
+  std::vector<double> response(100);
+  std::vector<int> predictor(100);
+  
+  // Fill response vector with standard normal values
+  const gsl_rng_type* T;
+  gsl_rng* rng;
+
+  gsl_rng_env_setup();
+  T = gsl_rng_default;
+  rng = gsl_rng_alloc(T);
+  
+  for (int i = 0; i < 100; i++) {
+    double z = gsl_ran_ugaussian(rng);
+    response[i] = z;
+  }
+  gsl_rng_free(rng);
+  
+  // Fill predictor vector with (0, 1, 2) values
+  for (int i = 0; i < 100; i++) {
+    predictor[i] = i % 3;
+  }
+  
+  // Calculate the least square estimators of beta0 and beta1
+  double x_mean = accumulate(predictor.begin(), predictor.end(), 0.0) / predictor.size();
+  double y_mean = accumulate(response.begin(), response.end(), 0.0) / response.size();
+  double sum_xy = inner_product(predictor.begin(), predictor.end(), response.begin(), 0.0);
+  double sum_xx = inner_product(predictor.begin(), predictor.end(), predictor.begin(), 0.0);
+  double beta1 = (sum_xy - predictor.size() * x_mean * y_mean) / (sum_xx - predictor.size() * pow(x_mean, 2));
+  double beta0 = y_mean - beta1 * x_mean;
+  
+  // Calculate the standard error of beta1
+  double sum_residuals_squared = 0;
+  for (int i = 0; i < predictor.size(); i++) {
+    double residual = response[i] - (beta0 + beta1 * predictor[i]);
+    sum_residuals_squared += pow(residual, 2);
+  }
+  double mse = sum_residuals_squared / (predictor.size() - 2);
+  double std_err = sqrt(mse / sum_xx);
+  
+  // Calculate two-sided z-score for the regression coefficient
+  double z_c1 = beta1 / std_err;
+  //double p_c1 = 2 * (1 - gsl_cdf_tdist(fabs(t_c1), predictor.size() - 2));
+  //double z_c1 = gsl_cdf_gaussian_Pinv(p_c1 / 2, 1);
+  
+  // Print two-sided z-score for the regression coefficient
+  std::cout << "Two-sided z-score for the regression coefficient: " << z_c1 << std::endl;
 }
   
