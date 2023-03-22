@@ -426,11 +426,17 @@ void simulate_af1_z(int chr_num,
   double af1ref;
   long long int bp, fpos;
   
+  // Simulate response variable (standard normal variates)
   std::random_device rd;
   std::mt19937 gen(rd());
+  std::normal_distribution<> dist(0, 1);
+  std::vector<double> response; // Used to store simulated response variable values.
+  for (int i = 0; i < total_num_subj; i++) {
+    double z = dist(gen);
+    response.push_back(z);
+  }  
   
-  // Simulate response variable (standard normal variates)
-  std::vector<double> response; // Used to simulate association z-scores.
+  /*
   const gsl_rng_type* T;
   gsl_rng* rng;
   gsl_rng_env_setup();
@@ -441,7 +447,7 @@ void simulate_af1_z(int chr_num,
     response.push_back(z);
   }
   gsl_rng_free(rng);
-  
+  */
   
   while(true){
     last_char = BgzfGetLine(fpi, index_line);
@@ -521,6 +527,201 @@ void simulate_af1_z(int chr_num,
   
 }
 
+// [[Rcpp::export]]
+void simulate_af1_z2(int chr_num,
+                    std::vector<std::string> pop_vec,
+                    std::vector<int> num_sim_vec,
+                    std::string index_data_file,
+                    std::string reference_data_file,
+                    std::string reference_pop_desc_file,
+                    std::string ref_out_file){
+  
+  // Read pop_vec and convert pops uppercase
+  std::vector<std::string> pop_vec_input;
+  for(int i=0; i<pop_vec.size(); i++){
+    std::string pop = pop_vec[i];
+    std::transform(pop.begin(), pop.end(), pop.begin(), ::toupper); //make capital
+    pop_vec_input.push_back(pop);
+  }
+  
+  // Read reference_pop_desc_file 
+  std::string ref_desc_file = reference_pop_desc_file;
+  std::ifstream in_ref_desc(ref_desc_file.c_str());
+  
+  if(!in_ref_desc){
+    Rcpp::Rcout<<std::endl;
+    Rcpp::stop("ERROR: can't open reference population description file '"+ref_desc_file+"'");
+  }
+  std::string line;
+  std::string pop_abb, sup_pop_abb;
+  int pop_num_subj;
+  std::vector<std::string> ref_pop_vec;
+  std::vector<int> ref_pop_size_vec;
+  std::vector<std::string> ref_sup_pop_vec;
+  
+  std::getline(in_ref_desc, line); //read header of input file.  
+  while(std::getline(in_ref_desc, line)){
+    std::istringstream buffer(line);
+    buffer >> pop_abb >> pop_num_subj >> sup_pop_abb;
+    ref_pop_vec.push_back(pop_abb);
+    ref_pop_size_vec.push_back(pop_num_subj);
+    ref_sup_pop_vec.push_back(sup_pop_abb);
+  }//while
+  int num_pops;
+  num_pops=ref_pop_vec.size();
+  in_ref_desc.close();
+  
+  // init pop_flag vector
+  std::vector<int> pop_flag_vec;
+  for(int i=0; i<num_pops; i++){
+    std::string pop = ref_pop_vec[i];
+    if(std::find(pop_vec_input.begin(), pop_vec_input.end(), pop)!=pop_vec_input.end()){ //if pop is found in pop_vec_input
+      pop_flag_vec.push_back(1);
+    } else {
+      pop_flag_vec.push_back(0);
+    }
+  }
+  
+  // total number of bootstrap samples
+  int total_num_subj=0;
+  for(int i=0; i<num_sim_vec.size();i++){
+    total_num_subj += num_sim_vec[i];
+  }
+  
+  // open reference panel index data
+  BGZF* fpi = bgzf_open(index_data_file.c_str(), "r");
+  if(!fpi){
+    std::cout<<std::endl;
+    Rcpp::stop("ERROR: can't open index data file '"+index_data_file+"'");
+  }
+  // open reference panel genotype data
+  BGZF* fpd = bgzf_open(reference_data_file.c_str(), "r");
+  if(!fpd){
+    std::cout<<std::endl;
+    Rcpp::stop("ERROR: can't open reference data file '"+reference_data_file+"'");
+  }
+  
+  // open output file
+  std::ofstream data_out;
+  data_out.open(ref_out_file.c_str());
+  // write header
+  data_out<<"rsid chr bp a1 a2 sim_af1 sim_z"<<std::endl;
+  //data_out<<"rsid chr bp a1 a2 sim_af1 beta1 beta0 mse sxy sxx std_err sim_z"<<std::endl;
+  
+  int last_char;
+  std::string index_line, data_line;
+  std::string rsid, a1, a2;
+  int chr;
+  double af1ref;
+  long long int bp, fpos;
+  
+  // Simulate response variable (standard normal variates)
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::normal_distribution<> dist(0, 1);
+  std::vector<double> response; // Used to store simulated response variable values.
+  for (int i = 0; i < total_num_subj; i++) {
+    double z = dist(gen);
+    response.push_back(z);
+  }
+  
+  // To randomly draw with replacement a subject's genotypes from 
+  // each combination of ethnicities, randomly select indexes 
+  // of subjects in each ethnic group and store the information 
+  // in geno_index_vec. The geno_index_vec will be used to simulate
+  // genotypes
+  std::vector<int> geno_index_vec;
+  int pop_counter=0;
+  for(int k=0; k<num_pops; k++){
+    if(pop_flag_vec[k]) {
+      for(int j=0; j<num_sim_vec[pop_counter]; j++){
+        std::uniform_int_distribution<> dis(0, ref_pop_size_vec[k] - 1);
+        int ran_index = dis(gen);
+        geno_index_vec.push_back(ran_index);
+      }
+      pop_counter++;
+    }
+  }
+  
+  while(true){
+    last_char = BgzfGetLine(fpi, index_line);
+    if(last_char == -1) //EOF
+      break;
+    
+    std::istringstream buffer(index_line);
+    buffer >> rsid >> chr >> bp >> a1 >> a2 >> af1ref >> fpos;
+    
+    double allele_counter=0.0;
+    if(chr==chr_num){
+      
+      bgzf_seek(fpd, fpos, SEEK_SET);
+      last_char = BgzfGetLine(fpd, data_line);      
+      if(last_char == -1) //EOF
+        break;
+      
+      std::istringstream data_buffer(data_line);
+      std::vector<double> geno_vec;
+      int pop_counter=0;
+      int subj_counter=0;
+      for(int k=0; k<num_pops; k++){
+        std::string geno_str;
+        data_buffer >> geno_str;
+        if(pop_flag_vec[k]) {
+          for(int j=0; j<num_sim_vec[pop_counter]; j++){
+            //std::uniform_int_distribution<> dis(0, ref_pop_size_vec[k] - 1);
+            int ran_index = geno_index_vec[j+subj_counter];
+            double geno = (double)(geno_str[ran_index] - '0');
+            allele_counter += geno;
+            geno_vec.push_back(geno);
+          }
+          subj_counter = subj_counter + num_sim_vec[pop_counter];
+          pop_counter++;
+        }
+      }
+      // compute af1 of simulated genotype
+      double sim_af1 = allele_counter/(2*total_num_subj);
+      sim_af1 = std::ceil(sim_af1*100000.0)/100000.0;  //round up to 5 decimal places
+      
+      // Compute association Z-score using simulated genotype and phenotype under null
+      // Calculate the least square estimators of beta0 and beta1
+      double x_mean = accumulate(geno_vec.begin(), geno_vec.end(), 0.0) / geno_vec.size();
+      double y_mean = accumulate(response.begin(), response.end(), 0.0) / response.size();
+      double sum_xy = inner_product(geno_vec.begin(), geno_vec.end(), response.begin(), 0.0);
+      double sum_xx = inner_product(geno_vec.begin(), geno_vec.end(), geno_vec.begin(), 0.0);
+      double sxy = sum_xy - geno_vec.size() * x_mean * y_mean;
+      double sxx = sum_xx - geno_vec.size() * pow(x_mean, 2);
+      double beta1 = sxy/sxx;
+      double beta0 = y_mean - beta1 * x_mean;
+      
+      // Calculate the standard error of beta1
+      double sum_residuals_squared = 0;
+      for (int i = 0; i < geno_vec.size(); i++) {
+        double residual = response[i] - (beta0 + beta1 * geno_vec[i]);
+        sum_residuals_squared += pow(residual, 2);
+      }
+      double mse = sum_residuals_squared / (geno_vec.size() - 2);
+      double std_err = sqrt(mse/sxx);
+      
+      // Calculate two-sided z-score for the regression coefficient
+      double sim_z = beta1 / std_err;
+      sim_z = std::ceil(sim_z*100000.0)/100000.0;  //round up to 5 decimal places  
+      // write results in file
+      data_out<<rsid<<" "<<chr<<" "<<bp<<" "<<a1<<" "<<a2<<" ";
+      data_out<<std::setprecision(5)<<std::fixed<<sim_af1<<" ";
+      //data_out<<std::setprecision(5)<<std::fixed<<beta1<<" ";
+      //data_out<<std::setprecision(5)<<std::fixed<<beta0<<" ";
+      //data_out<<std::setprecision(5)<<std::fixed<<mse<<" ";
+      //data_out<<std::setprecision(5)<<std::fixed<<sxy<<" ";
+      //data_out<<std::setprecision(5)<<std::fixed<<sxx<<" ";
+      //data_out<<std::setprecision(5)<<std::fixed<<std_err<<" ";
+      data_out<<std::setprecision(5)<<std::fixed<<sim_z<<std::endl;
+    }
+  }
+  data_out.close(); //close output filestream
+  bgzf_close(fpi);  //close reference index file
+  bgzf_close(fpd);  //close reference data file
+  
+}
 
 
 
