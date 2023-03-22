@@ -337,7 +337,7 @@ void extract_all_af1(int chr_num,
 }
 
 
-
+/*
 // [[Rcpp::export]]
 void simulate_af1_z(int chr_num,
                   std::vector<std::string> pop_vec,
@@ -436,18 +436,16 @@ void simulate_af1_z(int chr_num,
     response.push_back(z);
   }  
   
-  /*
-  const gsl_rng_type* T;
-  gsl_rng* rng;
-  gsl_rng_env_setup();
-  T = gsl_rng_default;
-  rng = gsl_rng_alloc(T);
-  for (int i = 0; i < total_num_subj; i++) {
-    double z = gsl_ran_ugaussian(rng);
-    response.push_back(z);
-  }
-  gsl_rng_free(rng);
-  */
+  //const gsl_rng_type* T;
+  //gsl_rng* rng;
+  //gsl_rng_env_setup();
+  //T = gsl_rng_default;
+  //rng = gsl_rng_alloc(T);
+  //for (int i = 0; i < total_num_subj; i++) {
+  //  double z = gsl_ran_ugaussian(rng);
+  //  response.push_back(z);
+  //}
+  //gsl_rng_free(rng);
   
   while(true){
     last_char = BgzfGetLine(fpi, index_line);
@@ -526,9 +524,10 @@ void simulate_af1_z(int chr_num,
   bgzf_close(fpd);  //close reference data file
   
 }
-
+*/
+ 
 // [[Rcpp::export]]
-void simulate_af1_z2(int chr_num,
+void simulate_af1_z(int chr_num,
                     std::vector<std::string> pop_vec,
                     std::vector<int> num_sim_vec,
                     std::string index_data_file,
