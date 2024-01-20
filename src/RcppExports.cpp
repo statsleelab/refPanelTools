@@ -76,6 +76,21 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// simulate_af1_z_allchr
+void simulate_af1_z_allchr(std::vector<std::string> pop_vec, std::vector<int> num_sim_vec, std::string index_data_file, std::string reference_data_file, std::string reference_pop_desc_file, std::string ref_out_file);
+RcppExport SEXP _refPanelTools_simulate_af1_z_allchr(SEXP pop_vecSEXP, SEXP num_sim_vecSEXP, SEXP index_data_fileSEXP, SEXP reference_data_fileSEXP, SEXP reference_pop_desc_fileSEXP, SEXP ref_out_fileSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<std::string> >::type pop_vec(pop_vecSEXP);
+    Rcpp::traits::input_parameter< std::vector<int> >::type num_sim_vec(num_sim_vecSEXP);
+    Rcpp::traits::input_parameter< std::string >::type index_data_file(index_data_fileSEXP);
+    Rcpp::traits::input_parameter< std::string >::type reference_data_file(reference_data_fileSEXP);
+    Rcpp::traits::input_parameter< std::string >::type reference_pop_desc_file(reference_pop_desc_fileSEXP);
+    Rcpp::traits::input_parameter< std::string >::type ref_out_file(ref_out_fileSEXP);
+    simulate_af1_z_allchr(pop_vec, num_sim_vec, index_data_file, reference_data_file, reference_pop_desc_file, ref_out_file);
+    return R_NilValue;
+END_RCPP
+}
 // simulate_af1_z
 void simulate_af1_z(int chr_num, std::vector<std::string> pop_vec, std::vector<int> num_sim_vec, std::string index_data_file, std::string reference_data_file, std::string reference_pop_desc_file, std::string ref_out_file);
 RcppExport SEXP _refPanelTools_simulate_af1_z(SEXP chr_numSEXP, SEXP pop_vecSEXP, SEXP num_sim_vecSEXP, SEXP index_data_fileSEXP, SEXP reference_data_fileSEXP, SEXP reference_pop_desc_fileSEXP, SEXP ref_out_fileSEXP) {
@@ -157,6 +172,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_refPanelTools_extract_chr_data", (DL_FUNC) &_refPanelTools_extract_chr_data, 5},
     {"_refPanelTools_extract_chr_pop_data", (DL_FUNC) &_refPanelTools_extract_chr_pop_data, 6},
     {"_refPanelTools_extract_all_af1", (DL_FUNC) &_refPanelTools_extract_all_af1, 5},
+    {"_refPanelTools_simulate_af1_z_allchr", (DL_FUNC) &_refPanelTools_simulate_af1_z_allchr, 6},
     {"_refPanelTools_simulate_af1_z", (DL_FUNC) &_refPanelTools_simulate_af1_z, 7},
     {"_refPanelTools_extract_reg_data", (DL_FUNC) &_refPanelTools_extract_reg_data, 7},
     {"_refPanelTools_test_gz_file", (DL_FUNC) &_refPanelTools_test_gz_file, 1},
