@@ -29,7 +29,11 @@ write.table(new.table, file="/Users/leed13/Desktop/GAUSS/ref/Human/33KG/33kg_chr
 # Make cluster job table #
 ##########################
 
-win.size <- 1000000
+new.table <- read.table(file="/Users/leed13/Desktop/GAUSS/ref/Human/33KG/33kg_chr_size_long.txt", sep="\t", header = TRUE)
+
+win.size <- 100000
+#win.size <- 250000
+#win.size <- 1000000
 job.table <- data.frame(chr=integer(), arm=character(), start.bp=integer(), end.bp=integer())
 for(i in 1:nrow(new.table)){
   chr <- new.table$chr[i]
@@ -50,6 +54,12 @@ for(i in 1:nrow(new.table)){
 }
 job.table$win.size <- job.table$end.bp-job.table$start.bp + 1
 job.table <- format(job.table, scientific=FALSE)
-write.table(job.table, file="/Users/leed13/Desktop/GAUSS/ref/Human/33KG/33kg_1mb_job_table.txt", sep="\t", row.names=FALSE, quote=FALSE)
+write.table(job.table, file="/Users/leed13/Desktop/GAUSS/ref/Human/33KG/33kg_100kb_job_table.txt", sep="\t", row.names=FALSE, quote=FALSE)# 27043 5
+#write.table(job.table, file="/Users/leed13/Desktop/GAUSS/ref/Human/33KG/33kg_250kb_job_table.txt", sep="\t", row.names=FALSE, quote=FALSE) # 10829 5
+#write.table(job.table, file="/Users/leed13/Desktop/GAUSS/ref/Human/33KG/33kg_1mb_job_table.txt", sep="\t", row.names=FALSE, quote=FALSE) # 2724 5
 
+
+t1mb <- read.table(file="/Users/leed13/Desktop/GAUSS/ref/Human/33KG/33kg_1mb_job_table.txt", sep="\t", header=TRUE)
+t250kb <- read.table(file="/Users/leed13/Desktop/GAUSS/ref/Human/33KG/33kg_250kb_job_table.txt", sep="\t", header=TRUE)
+t100kb <- read.table(file="/Users/leed13/Desktop/GAUSS/ref/Human/33KG/33kg_100kb_job_table.txt", sep="\t", header=TRUE)
 
