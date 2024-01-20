@@ -337,7 +337,7 @@ void extract_all_af1(int chr_num,
 }
 
 
-// Simulate Z-scores all chromosome
+
 // [[Rcpp::export]]
 void simulate_af1_z_allchr(std::vector<std::string> pop_vec,
                            std::vector<int> num_sim_vec,
@@ -345,7 +345,6 @@ void simulate_af1_z_allchr(std::vector<std::string> pop_vec,
                            std::string reference_data_file,
                            std::string reference_pop_desc_file,
                            std::string ref_out_file){
-  
   // Read pop_vec and convert pops uppercase
   std::vector<std::string> pop_vec_input;
   for(int i=0; i<pop_vec.size(); i++){
