@@ -390,6 +390,22 @@ void simulate_af1_z_allchr(std::vector<std::string> pop_vec,
       pop_flag_vec.push_back(0);
     }
   }
+
+  if(pop_vec_input.size() != num_sim_vec.size()){
+    Rcpp::stop("ERROR: pop_vec and num_sim_vec must be the same length.");
+  }
+  for(int i=0; i<pop_vec_input.size(); i++){
+    if(std::find(ref_pop_vec.begin(), ref_pop_vec.end(), pop_vec_input[i])==ref_pop_vec.end()){
+      Rcpp::stop("ERROR: population '"+pop_vec_input[i]+"' not found in reference population description file.");
+    }
+  }
+  int pop_flag_count = 0;
+  for(int i=0; i<pop_flag_vec.size(); i++){
+    pop_flag_count += pop_flag_vec[i];
+  }
+  if(pop_flag_count != num_sim_vec.size()){
+    Rcpp::stop("ERROR: number of populations in pop_vec does not match reference populations after filtering.");
+  }
   
   // total number of bootstrap samples
   int total_num_subj=0;
@@ -578,6 +594,22 @@ void simulate_af1_z(int chr_num,
     } else {
       pop_flag_vec.push_back(0);
     }
+  }
+
+  if(pop_vec_input.size() != num_sim_vec.size()){
+    Rcpp::stop("ERROR: pop_vec and num_sim_vec must be the same length.");
+  }
+  for(int i=0; i<pop_vec_input.size(); i++){
+    if(std::find(ref_pop_vec.begin(), ref_pop_vec.end(), pop_vec_input[i])==ref_pop_vec.end()){
+      Rcpp::stop("ERROR: population '"+pop_vec_input[i]+"' not found in reference population description file.");
+    }
+  }
+  int pop_flag_count = 0;
+  for(int i=0; i<pop_flag_vec.size(); i++){
+    pop_flag_count += pop_flag_vec[i];
+  }
+  if(pop_flag_count != num_sim_vec.size()){
+    Rcpp::stop("ERROR: number of populations in pop_vec does not match reference populations after filtering.");
   }
   
   // total number of bootstrap samples
