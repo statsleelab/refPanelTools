@@ -3,7 +3,14 @@
 args <- commandArgs(trailingOnly = TRUE)
 package_root <- if (length(args) > 0) args[[1]] else "."
 
-tar_options <- "--format=posix --no-same-owner"
+tar_options <- paste(
+  "--format=posix",
+  "--no-same-owner",
+  "--no-same-permissions",
+  "--numeric-owner",
+  "--owner=0",
+  "--group=0"
+)
 if (nzchar(Sys.getenv("TAR_OPTIONS"))) {
   tar_options <- paste(Sys.getenv("TAR_OPTIONS"), tar_options)
 }
