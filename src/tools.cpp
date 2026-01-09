@@ -8,9 +8,6 @@
 
 #include <iostream>
 #include <cmath>
-#include <gsl/gsl_cdf.h>
-#include <gsl/gsl_rng.h>
-#include <gsl/gsl_randist.h>
 
 using namespace Rcpp;
 
@@ -900,18 +897,13 @@ void simulate_zscore(){
   std::vector<int> predictor(100);
   
   // Fill response vector with standard normal values
-  const gsl_rng_type* T;
-  gsl_rng* rng;
-
-  gsl_rng_env_setup();
-  T = gsl_rng_default;
-  rng = gsl_rng_alloc(T);
+  std::random_device rd;
+  std::mt19937 rng(rd());
+  std::normal_distribution<double> dist(0.0, 1.0);
   
   for (int i = 0; i < 100; i++) {
-    double z = gsl_ran_ugaussian(rng);
-    response[i] = z;
+    response[i] = dist(rng);
   }
-  gsl_rng_free(rng);
   
   // Fill predictor vector with (0, 1, 2) values
   for (int i = 0; i < 100; i++) {
