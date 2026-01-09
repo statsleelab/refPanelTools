@@ -812,7 +812,7 @@ void test_gz_file(std::string gz_file){
     Rcpp::stop("ERROR: can't open index data file '"+gz_file+"'");
   }
   std::string line;
-  int last_char = BgzfGetLine(fp, line);
+  BgzfGetLine(fp, line);
   std::cout<<line<<std::endl;
   bgzf_close(fp);
 }

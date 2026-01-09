@@ -51,7 +51,7 @@ extern off_t ftello(FILE *stream);
 extern int fseeko(FILE *stream, off_t offset, int whence);
 #endif
 
-typedef int8_t bgzf_byte_t;
+typedef uint8_t bgzf_byte_t;
 
 static const int DEFAULT_BLOCK_SIZE = 64 * 1024;
 static const int MAX_BLOCK_SIZE = 64 * 1024;
@@ -417,6 +417,7 @@ static void free_cache(BGZF *fp)
 	if (fp->open_mode != 'r') return;
 	for (k = kh_begin(h); k < kh_end(h); ++k)
 		if (kh_exist(h, k)) free(kh_val(h, k).block);
+	kh_clear_cache(h);
 	kh_destroy(cache, h);
 }
 
