@@ -74,7 +74,7 @@ for(chr.num in 1:9){
 }
 
 #############################################################
-## Extract genotype data of a user-specifed genomic region ##
+## Extract genotype data of a user-specified genomic region ##
 #############################################################
 library(refPanelTools)
 chr.num <- 14
@@ -216,7 +216,6 @@ sum(new.wgt2$wgt)
 #3 CEU 0.391
 #4 CSE 0.044
 #8 ORK 0.105
-
 
 
 
