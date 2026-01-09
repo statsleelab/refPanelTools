@@ -3,20 +3,22 @@
 \alias{refPanelTools}
 \docType{package}
 \title{
-  A short title line describing what the package does
+  Utilities for extracting and simulating reference panel data
 }
 \description{
-  A more detailed description of what the package does. A length
-  of about one to five lines is recommended.
+  refPanelTools provides utilities for extracting information from whole
+  genome sequencing reference panel datasets and preparing data for
+  downstream analyses.
 }
 \details{
-  This section should provide a more detailed overview of how to use the
-  package, including the most important functions.
+  The package focuses on indexing reference panels, extracting regional
+  genotype data, and simulating allele frequency and Z-score summaries
+  from reference resources.
 }
 \author{
-Your Name, email optional.
+Donghyung Lee
 
-Maintainer: Your Name <your@email.com>
+Maintainer: Donghyung Lee <dustorm@gmail.com>
 }
 \references{
   This optional section can contain literature or other references for
@@ -24,7 +26,9 @@ Maintainer: Your Name <your@email.com>
 }
 \keyword{ package }
 \seealso{
-  Optional links to other man pages
+  \code{\link{indexer}},
+  \code{\link{extract_reg_data}},
+  \code{\link{simulate_af1_z}}
 }
 \examples{
   \dontrun{
