@@ -56,8 +56,8 @@ typedef uint8_t bgzf_byte_t;
 static const int DEFAULT_BLOCK_SIZE = 64 * 1024;
 static const int MAX_BLOCK_SIZE = 64 * 1024;
 
-static const int BLOCK_HEADER_LENGTH = 18;
-static const int BLOCK_FOOTER_LENGTH = 8;
+enum { BLOCK_HEADER_LENGTH = 18 };
+enum { BLOCK_FOOTER_LENGTH = 8 };
 
 static const int GZIP_ID1 = 31;
 static const int GZIP_ID2 = 139;
@@ -634,6 +634,7 @@ int bgzf_close(BGZF* fp)
 #else
 			count = fwrite(fp->compressed_block, 1, block_length, fp->file);
 #endif
+			(void)count;
 		}
 #ifdef _USE_KNETFILE
         if (fflush(fp->x.fpw) != 0) {
