@@ -1,5 +1,20 @@
 # refPanelTools 1.1.0
 
+## Bug fixes
+
+* `simulate_af1_z()` / `simulate_af1_z_allchr()`: **`num_sim_vec` was matched to
+  populations in the order they appear in the population description file, not
+  in the order given in `pop_vec`.** Whenever `pop_vec` was supplied in a
+  different order, the per-population sample sizes were silently permuted and
+  the simulated AF1 and Z-scores were wrong. `num_sim_vec[i]` is now always the
+  sample size for `pop_vec[i]`. Results are unchanged for callers who already
+  listed `pop_vec` in population-description-file order.
+
+* `simulate_af1_z()` / `simulate_af1_z_allchr()`: added input validation --
+  duplicate entries in `pop_vec`, non-positive values in `num_sim_vec`, an
+  empty `pop_vec`, and a total sample size below 3 (the minimum needed for the
+  Z-score denominator) are now errors instead of silently producing `nan`.
+
 ## New functions
 
 * `read_region()`: A convenience wrapper around `extract_reg_data()` that

@@ -15,10 +15,14 @@ simulate_af1_z_allchr(
 }
 \arguments{
 \item{pop_vec}{Character vector. Population abbreviations to sample from
-(e.g. \code{c("CEU", "YRI")}). Case-insensitive.}
+(e.g. \code{c("CEU", "YRI")}). Case-insensitive. Each population may appear
+at most once.}
 
 \item{num_sim_vec}{Integer vector. Number of subjects to sample from each
-population in \code{pop_vec}. Must be the same length as \code{pop_vec}.}
+population, where \code{num_sim_vec[i]} is the sample size for \code{pop_vec[i]}.
+Must be the same length as \code{pop_vec} and contain positive values. The
+pairing is positional, so \code{pop_vec} may be given in any order; it need
+not follow the order of the population description file.}
 
 \item{index_data_file}{Character. Path to the reference panel index file.}
 

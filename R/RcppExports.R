@@ -165,9 +165,13 @@ extract_all_af1 <- function(chr_num, index_data_file, reference_data_file, refer
 #' Use this to generate genome-wide null Z-score distributions.
 #'
 #' @param pop_vec Character vector. Population abbreviations to sample from
-#'   (e.g. `c("CEU", "YRI")`). Case-insensitive.
+#'   (e.g. `c("CEU", "YRI")`). Case-insensitive. Each population may appear
+#'   at most once.
 #' @param num_sim_vec Integer vector. Number of subjects to sample from each
-#'   population in `pop_vec`. Must be the same length as `pop_vec`.
+#'   population, where `num_sim_vec[i]` is the sample size for `pop_vec[i]`.
+#'   Must be the same length as `pop_vec` and contain positive values. The
+#'   pairing is positional, so `pop_vec` may be given in any order; it need
+#'   not follow the order of the population description file.
 #' @param index_data_file Character. Path to the reference panel index file.
 #' @param reference_data_file Character. Path to the BGZF-compressed reference
 #'   genotype file.
@@ -205,9 +209,12 @@ simulate_af1_z_allchr <- function(pop_vec, num_sim_vec, index_data_file, referen
 #'
 #' @param chr_num Integer. Chromosome number (1--22).
 #' @param pop_vec Character vector. Population abbreviations to sample from.
-#'   Case-insensitive.
+#'   Case-insensitive. Each population may appear at most once.
 #' @param num_sim_vec Integer vector. Number of subjects to sample per
-#'   population. Must be the same length as `pop_vec`.
+#'   population, where `num_sim_vec[i]` is the sample size for `pop_vec[i]`.
+#'   Must be the same length as `pop_vec` and contain positive values. The
+#'   pairing is positional, so `pop_vec` may be given in any order; it need
+#'   not follow the order of the population description file.
 #' @param index_data_file Character. Path to the reference panel index file.
 #' @param reference_data_file Character. Path to the BGZF-compressed reference
 #'   genotype file.

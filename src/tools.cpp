@@ -508,31 +508,39 @@ static void simulate_af1_z_impl(
   int num_pops = ref_pop_vec.size();
   in_ref_desc.close();
 
-  // Build flag vector: 1 if population is requested, 0 otherwise
-  std::vector<int> pop_flag_vec(num_pops, 0);
-  for(int i = 0; i < num_pops; i++){
-    if(std::find(pop_vec_input.begin(), pop_vec_input.end(), ref_pop_vec[i])
-       != pop_vec_input.end())
-      pop_flag_vec[i] = 1;
-  }
-
   // Validate inputs
   if(pop_vec_input.size() != num_sim_vec.size())
     Rcpp::stop("ERROR: pop_vec and num_sim_vec must be the same length.");
+  if(pop_vec_input.empty())
+    Rcpp::stop("ERROR: pop_vec must not be empty.");
+
+  // Map each requested population onto its position in the reference panel.
+  // num_sim_by_ref is indexed by reference-panel population order, so that
+  // pop_vec may be given in any order without permuting the sample sizes.
+  std::vector<int> pop_flag_vec(num_pops, 0);
+  std::vector<int> num_sim_by_ref(num_pops, 0);
   for(int i = 0; i < (int)pop_vec_input.size(); i++){
-    if(std::find(ref_pop_vec.begin(), ref_pop_vec.end(), pop_vec_input[i])
-       == ref_pop_vec.end())
+    std::vector<std::string>::iterator it =
+      std::find(ref_pop_vec.begin(), ref_pop_vec.end(), pop_vec_input[i]);
+    if(it == ref_pop_vec.end())
       Rcpp::stop("ERROR: population '" + pop_vec_input[i] +
                  "' not found in reference population description file.");
+    int ref_idx = (int)(it - ref_pop_vec.begin());
+    if(pop_flag_vec[ref_idx])
+      Rcpp::stop("ERROR: population '" + pop_vec_input[i] +
+                 "' is listed more than once in pop_vec.");
+    if(num_sim_vec[i] <= 0)
+      Rcpp::stop("ERROR: num_sim_vec must contain positive values (population '" +
+                 pop_vec_input[i] + "').");
+    pop_flag_vec[ref_idx]   = 1;
+    num_sim_by_ref[ref_idx] = num_sim_vec[i];
   }
-  int pop_flag_count = 0;
-  for(int i = 0; i < num_pops; i++) pop_flag_count += pop_flag_vec[i];
-  if(pop_flag_count != (int)num_sim_vec.size())
-    Rcpp::stop("ERROR: number of populations in pop_vec does not match "
-               "reference populations after filtering.");
 
   int total_num_subj = 0;
-  for(int i = 0; i < (int)num_sim_vec.size(); i++) total_num_subj += num_sim_vec[i];
+  for(int i = 0; i < num_pops; i++) total_num_subj += num_sim_by_ref[i];
+  if(total_num_subj < 3)
+    Rcpp::stop("ERROR: the total number of simulated subjects must be at "
+               "least 3 to compute an association Z-score.");
 
   // Open BGZF files
   BGZF* fpi = bgzf_open(index_data_file.c_str(), "r");
@@ -554,13 +562,11 @@ static void simulate_af1_z_impl(
   for(int i = 0; i < total_num_subj; i++) response[i] = norm_dist(gen);
 
   std::vector<int> geno_index_vec;
-  int pop_counter = 0;
   for(int k = 0; k < num_pops; k++){
     if(pop_flag_vec[k]){
       std::uniform_int_distribution<> dis(0, ref_pop_size_vec[k] - 1);
-      for(int j = 0; j < num_sim_vec[pop_counter]; j++)
+      for(int j = 0; j < num_sim_by_ref[k]; j++)
         geno_index_vec.push_back(dis(gen));
-      pop_counter++;
     }
   }
 
@@ -589,19 +595,17 @@ static void simulate_af1_z_impl(
     std::istringstream dbuf(data_line);
     std::vector<double> geno_vec;
     double allele_counter = 0.0;
-    pop_counter = 0;
     int subj_counter = 0;
     for(int k = 0; k < num_pops; k++){
       std::string geno_str;
       dbuf >> geno_str;
       if(pop_flag_vec[k]){
-        for(int j = 0; j < num_sim_vec[pop_counter]; j++){
+        for(int j = 0; j < num_sim_by_ref[k]; j++){
           double geno = (double)(geno_str[geno_index_vec[j + subj_counter]] - '0');
           allele_counter += geno;
           geno_vec.push_back(geno);
         }
-        subj_counter += num_sim_vec[pop_counter];
-        pop_counter++;
+        subj_counter += num_sim_by_ref[k];
       }
     }
 
@@ -645,9 +649,13 @@ static void simulate_af1_z_impl(
 //' Use this to generate genome-wide null Z-score distributions.
 //'
 //' @param pop_vec Character vector. Population abbreviations to sample from
-//'   (e.g. `c("CEU", "YRI")`). Case-insensitive.
+//'   (e.g. `c("CEU", "YRI")`). Case-insensitive. Each population may appear
+//'   at most once.
 //' @param num_sim_vec Integer vector. Number of subjects to sample from each
-//'   population in `pop_vec`. Must be the same length as `pop_vec`.
+//'   population, where `num_sim_vec[i]` is the sample size for `pop_vec[i]`.
+//'   Must be the same length as `pop_vec` and contain positive values. The
+//'   pairing is positional, so `pop_vec` may be given in any order; it need
+//'   not follow the order of the population description file.
 //' @param index_data_file Character. Path to the reference panel index file.
 //' @param reference_data_file Character. Path to the BGZF-compressed reference
 //'   genotype file.
@@ -693,9 +701,12 @@ void simulate_af1_z_allchr(std::vector<std::string> pop_vec,
 //'
 //' @param chr_num Integer. Chromosome number (1--22).
 //' @param pop_vec Character vector. Population abbreviations to sample from.
-//'   Case-insensitive.
+//'   Case-insensitive. Each population may appear at most once.
 //' @param num_sim_vec Integer vector. Number of subjects to sample per
-//'   population. Must be the same length as `pop_vec`.
+//'   population, where `num_sim_vec[i]` is the sample size for `pop_vec[i]`.
+//'   Must be the same length as `pop_vec` and contain positive values. The
+//'   pairing is positional, so `pop_vec` may be given in any order; it need
+//'   not follow the order of the population description file.
 //' @param index_data_file Character. Path to the reference panel index file.
 //' @param reference_data_file Character. Path to the BGZF-compressed reference
 //'   genotype file.
