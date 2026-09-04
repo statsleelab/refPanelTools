@@ -20,19 +20,10 @@ Donghyung Lee
 
 Maintainer: Donghyung Lee <dustorm@gmail.com>
 }
-\references{
-  This optional section can contain literature or other references for
-  background information.
-}
 \keyword{ package }
 \seealso{
   \code{\link{indexer}},
   \code{\link{extract_reg_data}},
+  \code{\link{read_region}},
   \code{\link{simulate_af1_z}}
-}
-\examples{
-  \dontrun{
-     ## Optional simple examples of the most important functions
-     ## These can be in \dontrun{} and \donttest{} blocks.   
-  }
 }

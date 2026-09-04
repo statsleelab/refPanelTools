@@ -1,11 +1,23 @@
 Package: refPanelTools
 Type: Package
-Title: Tools for reference panel datasets
-Version: 1.0
-Date: 2021-11-03
-Author: Donghyung Lee
-Maintainer: Donghyung Lee <dustorm@gmail.com>
-Description: refPanelTools provides a number of tools for extracting information from whole genome sequencing reference panel datasets.
+Title: Tools for Reference Panel Datasets
+Version: 1.1.0
+Date: 2026-09-04
+Authors@R: person("Donghyung", "Lee", email = "dustorm@gmail.com",
+    role = c("aut", "cre"))
+Description: Provides tools for indexing, extracting, and simulating data from
+    BGZF-compressed whole-genome sequencing reference panel datasets such as
+    the 33KG panel. Functions support extraction by chromosome, population
+    subset, or genomic region, as well as simulation of association Z-scores
+    under the null for multi-ethnic GWAS.
 License: GPL (>= 2)
-Imports: Rcpp (>= 1.0.7)
+URL: https://github.com/statsleelab/refPanelTools
+BugReports: https://github.com/statsleelab/refPanelTools/issues
+Encoding: UTF-8
+Imports:
+    Rcpp (>= 1.0.7),
+    utils
 LinkingTo: Rcpp
+Suggests: testthat (>= 3.0.0)
+Roxygen: list(markdown = TRUE)
+Config/roxygen2/version: 8.1.0
