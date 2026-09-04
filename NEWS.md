@@ -15,6 +15,12 @@
   empty `pop_vec`, and a total sample size below 3 (the minimum needed for the
   Z-score denominator) are now errors instead of silently producing `nan`.
 
+* `bgzf.c`: `packInt16()`, `unpackInt16()` and `packInt32()` were declared
+  `inline` without `static`, which under C99 and later emits no external
+  definition. The package linked only because these were always inlined at
+  `-O2`; unoptimised builds (including `devtools::load_all()` / `document()`)
+  failed with `symbol not found: _packInt16`. Now declared `static inline`.
+
 ## New functions
 
 * `read_region()`: A convenience wrapper around `extract_reg_data()` that
