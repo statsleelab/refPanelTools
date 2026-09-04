@@ -164,6 +164,9 @@ extract_all_af1 <- function(chr_num, index_data_file, reference_data_file, refer
 #' phenotype (standard normal), and computes the OLS association Z-score.
 #' Use this to generate genome-wide null Z-score distributions.
 #'
+#' Sampling uses R's random number generator, so a run is reproducible by
+#' calling [set.seed()] beforehand.
+#'
 #' @param pop_vec Character vector. Population abbreviations to sample from
 #'   (e.g. `c("CEU", "YRI")`). Case-insensitive. Each population may appear
 #'   at most once.
@@ -189,6 +192,7 @@ extract_all_af1 <- function(chr_num, index_data_file, reference_data_file, refer
 #'
 #' @examples
 #' \dontrun{
+#' set.seed(1)
 #' simulate_af1_z_allchr(
 #'   pop_vec = c("CEU", "YRI"),
 #'   num_sim_vec = c(100, 100),
@@ -208,6 +212,9 @@ simulate_af1_z_allchr <- function(pop_vec, num_sim_vec, index_data_file, referen
 #' Same simulation procedure as [simulate_af1_z_allchr()] but restricted to a
 #' single chromosome. Bootstrap subject indices are drawn once and reused
 #' across all SNPs on that chromosome (consistent sampling).
+#'
+#' Sampling uses R's random number generator, so a run is reproducible by
+#' calling [set.seed()] beforehand.
 #'
 #' @param chr_num Integer. Chromosome number (1--22).
 #' @param pop_vec Character vector. Population abbreviations to sample from.
@@ -234,6 +241,7 @@ simulate_af1_z_allchr <- function(pop_vec, num_sim_vec, index_data_file, referen
 #'
 #' @examples
 #' \dontrun{
+#' set.seed(1)
 #' simulate_af1_z(
 #'   chr_num = 22,
 #'   pop_vec = c("CEU", "YRI"),

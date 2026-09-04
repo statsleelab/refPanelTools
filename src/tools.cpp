@@ -532,6 +532,9 @@ static void simulate_af1_z_impl(
     if(num_sim_vec[i] <= 0)
       Rcpp::stop("ERROR: num_sim_vec must contain positive values (population '" +
                  pop_vec_input[i] + "').");
+    if(ref_pop_size_vec[ref_idx] <= 0)
+      Rcpp::stop("ERROR: population '" + pop_vec_input[i] + "' is declared to "
+                 "have no subjects in the population description file.");
     pop_flag_vec[ref_idx]   = 1;
     num_sim_by_ref[ref_idx] = num_sim_vec[i];
   }
@@ -553,20 +556,20 @@ static void simulate_af1_z_impl(
   std::ofstream data_out(ref_out_file.c_str());
   data_out << "rsid chr bp a1 a2 sim_af1 sim_z" << std::endl;
 
-  // Draw bootstrap sample indices and null phenotype once, reused across SNPs
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::normal_distribution<> norm_dist(0, 1);
-
+  // Draw bootstrap sample indices and null phenotype once, reused across SNPs.
+  // R's own generator is used rather than <random>, so that results are
+  // reproducible from R with set.seed(). The wrapper Rcpp generates for the
+  // exported functions installs an Rcpp::RNGScope, which takes care of
+  // GetRNGstate()/PutRNGstate(). R_unif_index() is the same draw sample()
+  // uses, and avoids the modulo bias of scaling a uniform deviate by hand.
   std::vector<double> response(total_num_subj);
-  for(int i = 0; i < total_num_subj; i++) response[i] = norm_dist(gen);
+  for(int i = 0; i < total_num_subj; i++) response[i] = ::norm_rand();
 
   std::vector<int> geno_index_vec;
   for(int k = 0; k < num_pops; k++){
     if(pop_flag_vec[k]){
-      std::uniform_int_distribution<> dis(0, ref_pop_size_vec[k] - 1);
       for(int j = 0; j < num_sim_by_ref[k]; j++)
-        geno_index_vec.push_back(dis(gen));
+        geno_index_vec.push_back((int)::R_unif_index((double)ref_pop_size_vec[k]));
     }
   }
 
@@ -673,6 +676,9 @@ static void simulate_af1_z_impl(
 //' phenotype (standard normal), and computes the OLS association Z-score.
 //' Use this to generate genome-wide null Z-score distributions.
 //'
+//' Sampling uses R's random number generator, so a run is reproducible by
+//' calling [set.seed()] beforehand.
+//'
 //' @param pop_vec Character vector. Population abbreviations to sample from
 //'   (e.g. `c("CEU", "YRI")`). Case-insensitive. Each population may appear
 //'   at most once.
@@ -698,6 +704,7 @@ static void simulate_af1_z_impl(
 //'
 //' @examples
 //' \dontrun{
+//' set.seed(1)
 //' simulate_af1_z_allchr(
 //'   pop_vec = c("CEU", "YRI"),
 //'   num_sim_vec = c(100, 100),
@@ -726,6 +733,9 @@ void simulate_af1_z_allchr(std::vector<std::string> pop_vec,
 //' single chromosome. Bootstrap subject indices are drawn once and reused
 //' across all SNPs on that chromosome (consistent sampling).
 //'
+//' Sampling uses R's random number generator, so a run is reproducible by
+//' calling [set.seed()] beforehand.
+//'
 //' @param chr_num Integer. Chromosome number (1--22).
 //' @param pop_vec Character vector. Population abbreviations to sample from.
 //'   Case-insensitive. Each population may appear at most once.
@@ -751,6 +761,7 @@ void simulate_af1_z_allchr(std::vector<std::string> pop_vec,
 //'
 //' @examples
 //' \dontrun{
+//' set.seed(1)
 //' simulate_af1_z(
 //'   chr_num = 22,
 //'   pop_vec = c("CEU", "YRI"),

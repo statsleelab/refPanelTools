@@ -48,8 +48,13 @@ Same simulation procedure as \code{\link[=simulate_af1_z_allchr]{simulate_af1_z_
 single chromosome. Bootstrap subject indices are drawn once and reused
 across all SNPs on that chromosome (consistent sampling).
 }
+\details{
+Sampling uses R's random number generator, so a run is reproducible by
+calling \code{\link[=set.seed]{set.seed()}} beforehand.
+}
 \examples{
 \dontrun{
+set.seed(1)
 simulate_af1_z(
   chr_num = 22,
   pop_vec = c("CEU", "YRI"),

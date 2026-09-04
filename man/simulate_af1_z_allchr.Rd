@@ -47,8 +47,13 @@ from specified populations (sampling with replacement), simulates a null
 phenotype (standard normal), and computes the OLS association Z-score.
 Use this to generate genome-wide null Z-score distributions.
 }
+\details{
+Sampling uses R's random number generator, so a run is reproducible by
+calling \code{\link[=set.seed]{set.seed()}} beforehand.
+}
 \examples{
 \dontrun{
+set.seed(1)
 simulate_af1_z_allchr(
   pop_vec = c("CEU", "YRI"),
   num_sim_vec = c(100, 100),

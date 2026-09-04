@@ -43,6 +43,19 @@
   ones. Now uses `std::round()`. **Output files produced by earlier versions
   differ in the fifth decimal place and should be regenerated.**
 
+* `simulate_af1_z()` / `simulate_af1_z_allchr()`: the bootstrap sample and the
+  null phenotype were drawn from `std::mt19937` seeded by `std::random_device`,
+  so `set.seed()` had no effect and no run could be reproduced -- a simulation
+  whose output could not be regenerated or checked. Both now draw from R's own
+  generator (`norm_rand()` and `R_unif_index()`), so a run is reproducible with
+  `set.seed()`, including across sessions. Runs without an explicit seed still
+  differ from each other, as before. `R_unif_index()` is the draw `sample()`
+  uses and avoids the modulo bias of scaling a uniform deviate by hand.
+
+* `simulate_af1_z()` / `simulate_af1_z_allchr()`: a population declared with
+  zero subjects in the population description file is now an error rather than
+  an empty sampling range.
+
 ## New functions
 
 * `read_region()`: A convenience wrapper around `extract_reg_data()` that
