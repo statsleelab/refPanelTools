@@ -19,7 +19,9 @@ extract_chr_pop_data(
 \item{pop_vec}{Character vector. Population abbreviations to include
 (e.g. \code{c("CEU", "YRI")}). Case-insensitive.}
 
-\item{index_data_file}{Character. Path to the reference panel index file.}
+\item{index_data_file}{Character. Path to the BGZF-compressed reference
+panel index file, whose columns are
+\code{rsid chr bp a1 a2 af1ref fpos}.}
 
 \item{reference_data_file}{Character. Path to the BGZF-compressed reference
 genotype file.}

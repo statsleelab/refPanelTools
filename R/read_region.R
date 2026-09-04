@@ -12,7 +12,8 @@
 #' @param chr_num Integer. Chromosome number (1--22).
 #' @param start_bp Integer. Start base pair position (inclusive).
 #' @param end_bp Integer. End base pair position (inclusive).
-#' @param index_data_file Character. Path to the reference panel index file.
+#' @param index_data_file Character. Path to the BGZF-compressed reference
+#'   panel index file, whose columns are `rsid chr bp a1 a2 af1ref fpos`.
 #' @param reference_data_file Character. Path to the BGZF-compressed reference
 #'   genotype file.
 #' @param pop_desc_file Character. Path to the population description file

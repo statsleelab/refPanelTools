@@ -26,7 +26,9 @@ Must be the same length as \code{pop_vec} and contain positive values. The
 pairing is positional, so \code{pop_vec} may be given in any order; it need
 not follow the order of the population description file.}
 
-\item{index_data_file}{Character. Path to the reference panel index file.}
+\item{index_data_file}{Character. Path to the BGZF-compressed reference
+panel index file, whose columns are
+\code{rsid chr bp a1 a2 af1ref fpos}.}
 
 \item{reference_data_file}{Character. Path to the BGZF-compressed reference
 genotype file.}

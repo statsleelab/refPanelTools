@@ -8,30 +8,127 @@
 
 #include <iostream>
 #include <cmath>
+#include <cstdlib>
 
 using namespace Rcpp;
 
 int BgzfGetLine(BGZF* fp, std::string& line);
 
-//' Build Index File for a BGZF Reference Panel
+// Opens an output file, failing loudly. std::ofstream reports nothing on its
+// own, so an unwritable path used to look like a successful run that produced
+// an empty file.
+static void OpenOutputFile(std::ofstream& out, const std::string& path){
+  out.open(path.c_str());
+  if(!out.is_open())
+    Rcpp::stop("ERROR: can't open output file '" + path + "' for writing");
+}
+
+// Parses one line of the reference panel index file, whose columns are
+//   rsid chr bp a1 a2 af1ref fpos
+// Returns false when the line names a chromosome that is not a number (X, Y,
+// MT); the callers select by chromosome number, so those lines are skipped as
+// they always were. Anything else that does not parse is an error.
+//
+// The extractions used to run unchecked, which turned two realistic ways of
+// corrupting an index into silent wrong answers rather than failures. A short
+// line left fpos at 0, so the SNP stored at offset 0 was emitted in place of
+// the intended one. An fpos written in scientific notation -- what data.table's
+// fwrite() produces for a large offset when bit64 is not installed to keep the
+// column integer64 -- parsed as its leading digit, seeking a few bytes into the
+// file and shifting every genotype string by one subject.
+static bool ParseIndexLine(const std::string& index_line,
+                           std::string& rsid, int& chr, long long int& bp,
+                           std::string& a1, std::string& a2,
+                           double& af1ref, long long int& fpos){
+  std::istringstream buffer(index_line);
+  std::string chr_str;
+  if(!(buffer >> rsid >> chr_str >> bp >> a1 >> a2 >> af1ref >> fpos))
+    Rcpp::stop("ERROR: malformed index line, expected "
+               "'rsid chr bp a1 a2 af1ref fpos': '" + index_line + "'");
+
+  std::string trailing;
+  if(buffer >> trailing)
+    Rcpp::stop("ERROR: unexpected field '" + trailing + "' after fpos in index "
+               "line: '" + index_line + "'. An fpos in scientific notation "
+               "looks like this; write the index with an integer offset.");
+
+  if(fpos < 0)
+    Rcpp::stop("ERROR: negative file offset in index line: '" + index_line + "'");
+
+  char* end = NULL;
+  long chr_val = std::strtol(chr_str.c_str(), &end, 10);
+  if(end == chr_str.c_str() || *end != '\0')
+    return false;               // non-numeric chromosome: not selectable here
+  chr = (int)chr_val;
+  return true;
+}
+
+//' Record the Byte Offset of Every Line in a BGZF File
 //'
-//' Reads a BGZF-compressed reference panel genotype file and writes an index
-//' recording the byte offset (\code{fpos}) and line length for each SNP.
-//' The resulting index file is required by most other functions in this package.
+//' Walks a BGZF-compressed genotype file and writes, for each line, the virtual
+//' file offset at which it starts and its length. This is the offset
+//' \code{bgzf_seek()} consumes, encoding the compressed position of the line's
+//' block and its position within that block.
 //'
-//' @param reference_data_file Character. Path to the BGZF-compressed reference
-//'   genotype file (e.g. \code{"/33KG/33kg_geno.gz"}).
-//' @param output_file Character. Path for the output index file.
+//' This is a building block, not a finished index. The functions that read a
+//' reference panel -- \code{\link{extract_chr_data}},
+//' \code{\link{extract_reg_data}}, \code{\link{simulate_af1_z}} and the rest --
+//' take a seven-column index (\code{rsid chr bp a1 a2 af1ref fpos}), and
+//' \code{indexer} supplies only its last column. Its purpose is to recompute
+//' offsets after a new genotype file has been derived from an existing panel:
+//' the offsets in the original index no longer apply to the new file, so the
+//' \code{fpos} column has to be replaced while the SNP metadata is carried over
+//' unchanged. See the example.
 //'
-//' @return Invisibly returns \code{NULL}. Writes the index to \code{output_file}.
-//'   Each line contains: \code{fpos line_length}.
+//' @param reference_data_file Character. Path to the BGZF-compressed genotype
+//'   file to scan (e.g. \code{"/33KG/33kg_geno.gz"}).
+//' @param output_file Character. Path for the output. One line per input line,
+//'   containing \code{fpos line_length}, in file order.
+//'
+//' @return Invisibly returns \code{NULL}. Writes the offsets to
+//'   \code{output_file}.
+//'
+//' @section Writing the offsets back out:
+//' Offsets into a whole-genome panel are far larger than R's integer range.
+//' Read them with something that preserves them exactly -- \code{fread()}
+//' returns an \code{integer64} column when \pkg{bit64} is installed -- and
+//' check that the written index has not picked up scientific notation. A
+//' \code{fpos} written as \code{1.2e+15} parses as \code{1}, which seeks a few
+//' bytes into the file rather than to the intended SNP.
+//'
+//' @seealso \code{\link{extract_chr_data}} for producing the per-chromosome
+//'   genotype file that this function then indexes.
 //'
 //' @examples
 //' \dontrun{
-//' indexer(
-//'   reference_data_file = "/33KG/33kg_geno.gz",
-//'   output_file = "33kg_index.txt"
-//' )
+//' # Split a whole-genome panel into per-chromosome panels. The genotype
+//' # records are unchanged, but their positions in the new file are not, so
+//' # the fpos column of the index has to be rebuilt.
+//' library(data.table)
+//'
+//' ref_index <- fread("/33KG/33kg_index.gz")   # rsid chr bp a1 a2 af1ref fpos
+//'
+//' for (chr_num in 1:22) {
+//'   geno_out <- sprintf("/33KG/chr_data/33kg_chr%d_geno", chr_num)
+//'   extract_chr_data(chr_num, 29, "/33KG/33kg_index.gz", "/33KG/33kg_geno.gz",
+//'                    geno_out)
+//'   stopifnot(system(paste("bgzip -f", geno_out)) == 0L)
+//'
+//'   offsets_file <- tempfile()
+//'   indexer(paste0(geno_out, ".gz"), offsets_file)
+//'   offsets <- fread(offsets_file)             # fpos line_length
+//'
+//'   # extract_chr_data() writes SNPs in index order, and indexer() reads them
+//'   # back in file order, so the two line up row for row.
+//'   chr_index <- ref_index[ref_index$V2 == chr_num, ]
+//'   stopifnot(nrow(chr_index) == nrow(offsets))
+//'   chr_index$V7 <- offsets$V1                 # replace fpos
+//'
+//'   index_out <- sprintf("/33KG/chr_data/33kg_chr%d_index", chr_num)
+//'   fwrite(chr_index, index_out, quote = FALSE, sep = " ",
+//'          row.names = FALSE, col.names = FALSE)
+//'   stopifnot(system(paste("bgzip -f", index_out)) == 0L)
+//' }
 //' }
 //' @export
 // [[Rcpp::export]]
@@ -40,7 +137,7 @@ void indexer(std::string reference_data_file,
   
   BGZF* fp = bgzf_open(reference_data_file.c_str(), "r");
   std::ofstream outfile;
-  outfile.open(output_file.c_str());
+  OpenOutputFile(outfile, output_file);
   
   if(!fp){
     
@@ -93,7 +190,7 @@ void cal_af1ref(std::string reference_data_file,
                  std::string output_file){
   BGZF* fp = bgzf_open(reference_data_file.c_str(), "r");
   std::ofstream outfile;
-  outfile.open(output_file.c_str());
+  OpenOutputFile(outfile, output_file);
   if(!fp){
     
     Rcpp::stop("ERROR: can't open reference data file '"+reference_data_file+"'");
@@ -136,8 +233,10 @@ void cal_af1ref(std::string reference_data_file,
 //'
 //' @param chr_num Integer. Chromosome number (1--22).
 //' @param num_pops Integer. Total number of populations in the reference panel.
-//' @param index_data_file Character. Path to the reference panel index file
-//'   (output of \code{\link{indexer}}).
+//' @param index_data_file Character. Path to the BGZF-compressed reference
+//'   panel index file, whose columns are
+//'   \code{rsid chr bp a1 a2 af1ref fpos}. This is not the two-column output of
+//'   \code{\link{indexer}}, which supplies only the \code{fpos} column.
 //' @param reference_data_file Character. Path to the BGZF-compressed reference
 //'   genotype file.
 //' @param ref_out_file Character. Output file path. Each line is a raw genotype
@@ -176,7 +275,7 @@ void extract_chr_data(int chr_num,
   }
   
   std::ofstream data_out;
-  data_out.open(ref_out_file.c_str());
+  OpenOutputFile(data_out, ref_out_file);
   
   int last_char;
   std::string index_line, data_line;
@@ -190,8 +289,8 @@ void extract_chr_data(int chr_num,
     if(last_char == -1) //EOF
       break;
     
-    std::istringstream buffer(index_line);
-    buffer >> rsid >> chr >> bp >> a1 >> a2 >> af1ref >> fpos;
+    if(!ParseIndexLine(index_line, rsid, chr, bp, a1, a2, af1ref, fpos))
+      continue;   // chromosome is not a number; cannot be selected here
     
     if(chr==chr_num){
       bgzf_seek(fpd, fpos, SEEK_SET);
@@ -214,7 +313,9 @@ void extract_chr_data(int chr_num,
 //' @param chr_num Integer. Chromosome number (1--22).
 //' @param pop_vec Character vector. Population abbreviations to include
 //'   (e.g. \code{c("CEU", "YRI")}). Case-insensitive.
-//' @param index_data_file Character. Path to the reference panel index file.
+//' @param index_data_file Character. Path to the BGZF-compressed reference
+//'   panel index file, whose columns are
+//'   \code{rsid chr bp a1 a2 af1ref fpos}.
 //' @param reference_data_file Character. Path to the BGZF-compressed reference
 //'   genotype file.
 //' @param reference_pop_desc_file Character. Path to the population description
@@ -303,7 +404,7 @@ void extract_chr_pop_data(int chr_num,
   }
     
   std::ofstream data_out;
-  data_out.open(ref_out_file.c_str());
+  OpenOutputFile(data_out, ref_out_file);
   
   int last_char;
   std::string index_line, data_line;
@@ -317,8 +418,8 @@ void extract_chr_pop_data(int chr_num,
     if(last_char == -1) //EOF
       break;
     
-    std::istringstream buffer(index_line);
-    buffer >> rsid >> chr >> bp >> a1 >> a2 >> af1ref >> fpos;
+    if(!ParseIndexLine(index_line, rsid, chr, bp, a1, a2, af1ref, fpos))
+      continue;   // chromosome is not a number; cannot be selected here
     
     if(chr==chr_num){
       bgzf_seek(fpd, fpos, SEEK_SET);
@@ -357,7 +458,9 @@ void extract_chr_pop_data(int chr_num,
 //' populations appear in the population description file.
 //'
 //' @param chr_num Integer. Chromosome number (1--22).
-//' @param index_data_file Character. Path to the reference panel index file.
+//' @param index_data_file Character. Path to the BGZF-compressed reference
+//'   panel index file, whose columns are
+//'   \code{rsid chr bp a1 a2 af1ref fpos}.
 //' @param reference_data_file Character. Path to the BGZF-compressed reference
 //'   genotype file.
 //' @param reference_pop_desc_file Character. Path to the population description
@@ -425,7 +528,7 @@ void extract_all_af1(int chr_num,
   }
   
   std::ofstream data_out;
-  data_out.open(ref_out_file.c_str());
+  OpenOutputFile(data_out, ref_out_file);
   
   int last_char;
   std::string index_line, data_line;
@@ -439,8 +542,8 @@ void extract_all_af1(int chr_num,
     if(last_char == -1) //EOF
       break;
     
-    std::istringstream buffer(index_line);
-    buffer >> rsid >> chr >> bp >> a1 >> a2 >> af1ref >> fpos;
+    if(!ParseIndexLine(index_line, rsid, chr, bp, a1, a2, af1ref, fpos))
+      continue;   // chromosome is not a number; cannot be selected here
     
     if(chr==chr_num){
       bgzf_seek(fpd, fpos, SEEK_SET);
@@ -553,7 +656,8 @@ static void simulate_af1_z_impl(
   if(!fpd)
     Rcpp::stop("ERROR: can't open reference data file '" + reference_data_file + "'");
 
-  std::ofstream data_out(ref_out_file.c_str());
+  std::ofstream data_out;
+  OpenOutputFile(data_out, ref_out_file);
   data_out << "rsid chr bp a1 a2 sim_af1 sim_z" << std::endl;
 
   // Draw bootstrap sample indices and null phenotype once, reused across SNPs.
@@ -584,8 +688,8 @@ static void simulate_af1_z_impl(
     last_char = BgzfGetLine(fpi, index_line);
     if(last_char == -1) break;
 
-    std::istringstream ibuf(index_line);
-    ibuf >> rsid >> chr >> bp >> a1 >> a2 >> af1ref >> fpos;
+    if(!ParseIndexLine(index_line, rsid, chr, bp, a1, a2, af1ref, fpos))
+      continue;   // chromosome is not a number; cannot be selected here
 
     // chr_num == -1 means all chromosomes; otherwise filter
     if(chr_num != -1 && chr != chr_num) continue;
@@ -687,7 +791,9 @@ static void simulate_af1_z_impl(
 //'   Must be the same length as `pop_vec` and contain positive values. The
 //'   pairing is positional, so `pop_vec` may be given in any order; it need
 //'   not follow the order of the population description file.
-//' @param index_data_file Character. Path to the reference panel index file.
+//' @param index_data_file Character. Path to the BGZF-compressed reference
+//'   panel index file, whose columns are
+//'   \code{rsid chr bp a1 a2 af1ref fpos}.
 //' @param reference_data_file Character. Path to the BGZF-compressed reference
 //'   genotype file.
 //' @param reference_pop_desc_file Character. Path to the population description
@@ -744,7 +850,9 @@ void simulate_af1_z_allchr(std::vector<std::string> pop_vec,
 //'   Must be the same length as `pop_vec` and contain positive values. The
 //'   pairing is positional, so `pop_vec` may be given in any order; it need
 //'   not follow the order of the population description file.
-//' @param index_data_file Character. Path to the reference panel index file.
+//' @param index_data_file Character. Path to the BGZF-compressed reference
+//'   panel index file, whose columns are
+//'   \code{rsid chr bp a1 a2 af1ref fpos}.
 //' @param reference_data_file Character. Path to the BGZF-compressed reference
 //'   genotype file.
 //' @param reference_pop_desc_file Character. Path to the population description
@@ -797,7 +905,9 @@ void simulate_af1_z(int chr_num,
 //' @param start_bp Integer. Start base pair position (inclusive).
 //' @param end_bp Integer. End base pair position (inclusive).
 //' @param num_pops Integer. Total number of populations in the reference panel.
-//' @param index_data_file Character. Path to the reference panel index file.
+//' @param index_data_file Character. Path to the BGZF-compressed reference
+//'   panel index file, whose columns are
+//'   \code{rsid chr bp a1 a2 af1ref fpos}.
 //' @param reference_data_file Character. Path to the BGZF-compressed reference
 //'   genotype file.
 //' @param ref_out_file Character. Output file path. Each line is a raw genotype
@@ -840,7 +950,7 @@ void extract_reg_data(int chr_num,
   }
   
   std::ofstream data_out;
-  data_out.open(ref_out_file.c_str());
+  OpenOutputFile(data_out, ref_out_file);
   
   int last_char;
   std::string index_line, data_line;
@@ -854,8 +964,8 @@ void extract_reg_data(int chr_num,
     if(last_char == -1) //EOF
       break;
     
-    std::istringstream buffer(index_line);
-    buffer >> rsid >> chr >> bp >> a1 >> a2 >> af1ref >> fpos;
+    if(!ParseIndexLine(index_line, rsid, chr, bp, a1, a2, af1ref, fpos))
+      continue;   // chromosome is not a number; cannot be selected here
     
     if(chr==chr_num && (bp >= start_bp && bp <= end_bp)){
       bgzf_seek(fpd, fpos, SEEK_SET);
@@ -948,7 +1058,10 @@ int BgzfGetLine(BGZF* fp, std::string& line){
     i++;
     c = bgzf_getc(fp);
     if(c == -2){
-      Rcpp::stop("ERROR: can't read " + std::to_string(i) + "-th character from BGZF file");
+      Rcpp::stop("ERROR: can't read character " + std::to_string(i) +
+                 " from BGZF file. The file must be compressed with bgzip; a "
+                 "plain gzip file fails here because it carries no BGZF block "
+                 "headers.");
     }
     if(c == -1){ // end of file                                                                                 
       break;

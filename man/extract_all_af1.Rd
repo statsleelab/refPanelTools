@@ -15,7 +15,9 @@ extract_all_af1(
 \arguments{
 \item{chr_num}{Integer. Chromosome number (1--22).}
 
-\item{index_data_file}{Character. Path to the reference panel index file.}
+\item{index_data_file}{Character. Path to the BGZF-compressed reference
+panel index file, whose columns are
+\code{rsid chr bp a1 a2 af1ref fpos}.}
 
 \item{reference_data_file}{Character. Path to the BGZF-compressed reference
 genotype file.}

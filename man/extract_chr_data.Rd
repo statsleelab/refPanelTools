@@ -17,8 +17,10 @@ extract_chr_data(
 
 \item{num_pops}{Integer. Total number of populations in the reference panel.}
 
-\item{index_data_file}{Character. Path to the reference panel index file
-(output of \code{\link{indexer}}).}
+\item{index_data_file}{Character. Path to the BGZF-compressed reference
+panel index file, whose columns are
+\code{rsid chr bp a1 a2 af1ref fpos}. This is not the two-column output of
+\code{\link{indexer}}, which supplies only the \code{fpos} column.}
 
 \item{reference_data_file}{Character. Path to the BGZF-compressed reference
 genotype file.}

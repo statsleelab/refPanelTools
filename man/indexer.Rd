@@ -2,30 +2,81 @@
 % Please edit documentation in R/RcppExports.R
 \name{indexer}
 \alias{indexer}
-\title{Build Index File for a BGZF Reference Panel}
+\title{Record the Byte Offset of Every Line in a BGZF File}
 \usage{
 indexer(reference_data_file, output_file)
 }
 \arguments{
-\item{reference_data_file}{Character. Path to the BGZF-compressed reference
-genotype file (e.g. \code{"/33KG/33kg_geno.gz"}).}
+\item{reference_data_file}{Character. Path to the BGZF-compressed genotype
+file to scan (e.g. \code{"/33KG/33kg_geno.gz"}).}
 
-\item{output_file}{Character. Path for the output index file.}
+\item{output_file}{Character. Path for the output. One line per input line,
+containing \code{fpos line_length}, in file order.}
 }
 \value{
-Invisibly returns \code{NULL}. Writes the index to \code{output_file}.
-Each line contains: \code{fpos line_length}.
+Invisibly returns \code{NULL}. Writes the offsets to
+\code{output_file}.
 }
 \description{
-Reads a BGZF-compressed reference panel genotype file and writes an index
-recording the byte offset (\code{fpos}) and line length for each SNP.
-The resulting index file is required by most other functions in this package.
+Walks a BGZF-compressed genotype file and writes, for each line, the virtual
+file offset at which it starts and its length. This is the offset
+\code{bgzf_seek()} consumes, encoding the compressed position of the line's
+block and its position within that block.
 }
+\details{
+This is a building block, not a finished index. The functions that read a
+reference panel -- \code{\link{extract_chr_data}},
+\code{\link{extract_reg_data}}, \code{\link{simulate_af1_z}} and the rest --
+take a seven-column index (\code{rsid chr bp a1 a2 af1ref fpos}), and
+\code{indexer} supplies only its last column. Its purpose is to recompute
+offsets after a new genotype file has been derived from an existing panel:
+the offsets in the original index no longer apply to the new file, so the
+\code{fpos} column has to be replaced while the SNP metadata is carried over
+unchanged. See the example.
+}
+\section{Writing the offsets back out}{
+
+Offsets into a whole-genome panel are far larger than R's integer range.
+Read them with something that preserves them exactly -- \code{fread()}
+returns an \code{integer64} column when \pkg{bit64} is installed -- and
+check that the written index has not picked up scientific notation. A
+\code{fpos} written as \code{1.2e+15} parses as \code{1}, which seeks a few
+bytes into the file rather than to the intended SNP.
+}
+
 \examples{
 \dontrun{
-indexer(
-  reference_data_file = "/33KG/33kg_geno.gz",
-  output_file = "33kg_index.txt"
-)
+# Split a whole-genome panel into per-chromosome panels. The genotype
+# records are unchanged, but their positions in the new file are not, so
+# the fpos column of the index has to be rebuilt.
+library(data.table)
+
+ref_index <- fread("/33KG/33kg_index.gz")   # rsid chr bp a1 a2 af1ref fpos
+
+for (chr_num in 1:22) {
+  geno_out <- sprintf("/33KG/chr_data/33kg_chr\%d_geno", chr_num)
+  extract_chr_data(chr_num, 29, "/33KG/33kg_index.gz", "/33KG/33kg_geno.gz",
+                   geno_out)
+  stopifnot(system(paste("bgzip -f", geno_out)) == 0L)
+
+  offsets_file <- tempfile()
+  indexer(paste0(geno_out, ".gz"), offsets_file)
+  offsets <- fread(offsets_file)             # fpos line_length
+
+  # extract_chr_data() writes SNPs in index order, and indexer() reads them
+  # back in file order, so the two line up row for row.
+  chr_index <- ref_index[ref_index$V2 == chr_num, ]
+  stopifnot(nrow(chr_index) == nrow(offsets))
+  chr_index$V7 <- offsets$V1                 # replace fpos
+
+  index_out <- sprintf("/33KG/chr_data/33kg_chr\%d_index", chr_num)
+  fwrite(chr_index, index_out, quote = FALSE, sep = " ",
+         row.names = FALSE, col.names = FALSE)
+  stopifnot(system(paste("bgzip -f", index_out)) == 0L)
 }
+}
+}
+\seealso{
+\code{\link{extract_chr_data}} for producing the per-chromosome
+genotype file that this function then indexes.
 }

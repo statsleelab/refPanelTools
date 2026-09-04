@@ -9,7 +9,37 @@
   regression test, and those tests were checked against the unfixed code to
   confirm they actually fail on it.
 
+## Documentation
+
+* `indexer()`'s documentation described it as producing the index the other
+  functions read. It does not: it writes two columns (`fpos line_length`), and
+  the extract and simulate functions read seven
+  (`rsid chr bp a1 a2 af1ref fpos`). Its actual role is to recompute offsets
+  after a genotype file has been derived from an existing panel, so that the
+  `fpos` column can be replaced while the SNP metadata is carried over. The
+  help page now says so and works the per-chromosome split through as an
+  example. `extract_chr_data()` no longer claims its index is `indexer()`'s
+  output, and every function that reads an index now names the seven columns.
+
 ## Bug fixes
+
+* The index file was parsed with unchecked `>>` extractions, turning two
+  realistic ways of corrupting an index into wrong answers rather than errors.
+  A truncated line left `fpos` at 0, so the SNP stored at offset 0 was emitted
+  in place of the intended one. An `fpos` in scientific notation -- what
+  `fwrite()` produces for a large offset when \pkg{bit64} is not installed to
+  keep the column `integer64` -- parsed as its leading digit, seeking a few
+  bytes into the file and shifting every genotype string by one subject.
+  Parsing now goes through one checked helper used by all five readers.
+  Chromosomes that are not numbers (X, Y, MT) are still skipped rather than
+  rejected, as before.
+
+* Output files were opened without checking that the open succeeded, so an
+  unwritable path looked like a successful run that produced nothing. All
+  seven call sites now report the failure.
+
+* Reading a plain gzip file failed with "can't read 1-th character from BGZF
+  file". The message now says the file must be compressed with `bgzip`.
 
 * `simulate_af1_z()` / `simulate_af1_z_allchr()`: **`num_sim_vec` was matched to
   populations in the order they appear in the population description file, not
