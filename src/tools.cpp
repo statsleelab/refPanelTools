@@ -66,7 +66,7 @@ void indexer(std::string reference_data_file,
 //'
 //' Reads the BGZF-compressed reference genotype file and computes the
 //' alternate allele frequency (AF1) across all populations combined.
-//' AF1 is rounded up to 5 decimal places.
+//' AF1 is rounded to 5 decimal places.
 //'
 //' @param reference_data_file Character. Path to the BGZF-compressed reference
 //'   genotype file.
@@ -76,7 +76,7 @@ void indexer(std::string reference_data_file,
 //'   the AF1 value for the corresponding SNP.
 //'
 //' @return Invisibly returns \code{NULL}. Writes one AF1 value per line to
-//'   \code{output_file}.
+//'   \code{output_file}, rounded to 5 decimal places.
 //'
 //' @examples
 //' \dontrun{
@@ -119,7 +119,7 @@ void cal_af1ref(std::string reference_data_file,
       }
     }
     af1ref = allele_counter/(2*num_subj);
-    af1ref = std::ceil(af1ref*100000.0)/100000.0;  //round up to 5 decimal places
+    af1ref = std::round(af1ref*100000.0)/100000.0;  //round to 5 decimal places
     outfile<<std::setprecision(5)<<std::fixed<<af1ref<<std::endl;
     //cc++;
     //if(cc>100)
@@ -598,8 +598,22 @@ static void simulate_af1_z_impl(
     int subj_counter = 0;
     for(int k = 0; k < num_pops; k++){
       std::string geno_str;
-      dbuf >> geno_str;
+      if(!(dbuf >> geno_str))
+        Rcpp::stop("ERROR: SNP '" + rsid + "' has fewer than " +
+                   std::to_string(num_pops) +
+                   " genotype fields; the genotype file and the population "
+                   "description file disagree.");
       if(pop_flag_vec[k]){
+        // Sampling indices were drawn from [0, ref_pop_size_vec[k]) using the
+        // subject count declared in the population description file. Reading
+        // past the end of geno_str would be undefined behaviour, so require
+        // the declared and actual subject counts to agree.
+        if((int)geno_str.length() != ref_pop_size_vec[k])
+          Rcpp::stop("ERROR: population '" + ref_pop_vec[k] + "' is declared to "
+                     "have " + std::to_string(ref_pop_size_vec[k]) +
+                     " subjects in the population description file, but SNP '" +
+                     rsid + "' has a genotype string of length " +
+                     std::to_string(geno_str.length()) + ".");
         for(int j = 0; j < num_sim_by_ref[k]; j++){
           double geno = (double)(geno_str[geno_index_vec[j + subj_counter]] - '0');
           allele_counter += geno;
@@ -610,7 +624,7 @@ static void simulate_af1_z_impl(
     }
 
     // Simulated AF1
-    double sim_af1 = std::ceil(allele_counter / (2.0 * total_num_subj) * 100000.0) / 100000.0;
+    double sim_af1 = std::round(allele_counter / (2.0 * total_num_subj) * 100000.0) / 100000.0;
 
     // OLS association Z-score under null
     double x_mean = std::accumulate(geno_vec.begin(), geno_vec.end(), 0.0) / geno_vec.size();
@@ -619,20 +633,31 @@ static void simulate_af1_z_impl(
     double sum_xx = std::inner_product(geno_vec.begin(), geno_vec.end(), geno_vec.begin(), 0.0);
     double sxy = sum_xy - (int)geno_vec.size() * x_mean * y_mean;
     double sxx = sum_xx - (int)geno_vec.size() * std::pow(x_mean, 2);
-    double beta1 = sxy / sxx;
-    double beta0 = y_mean - beta1 * x_mean;
 
-    double sse = 0.0;
-    for(int i = 0; i < (int)geno_vec.size(); i++){
-      double r = response[i] - (beta0 + beta1 * geno_vec[i]);
-      sse += r * r;
+    // A SNP that is monomorphic in the bootstrap sample has sxx == 0, leaving
+    // the slope and its standard error undefined. Emit NA rather than nan so
+    // that read.table() / fread() parse the column as numeric.
+    bool z_defined = (sxx > 0.0);
+    double sim_z = 0.0;
+    if(z_defined){
+      double beta1 = sxy / sxx;
+      double beta0 = y_mean - beta1 * x_mean;
+
+      double sse = 0.0;
+      for(int i = 0; i < (int)geno_vec.size(); i++){
+        double r = response[i] - (beta0 + beta1 * geno_vec[i]);
+        sse += r * r;
+      }
+      double std_err = std::sqrt((sse / (geno_vec.size() - 2)) / sxx);
+      sim_z = std::round((beta1 / std_err) * 100000.0) / 100000.0;
+      if(!std::isfinite(sim_z)) z_defined = false;   // e.g. a perfect fit, sse == 0
     }
-    double std_err = std::sqrt((sse / (geno_vec.size() - 2)) / sxx);
-    double sim_z = std::ceil((beta1 / std_err) * 100000.0) / 100000.0;
 
     data_out << rsid << " " << chr << " " << bp << " " << a1 << " " << a2 << " "
-             << std::setprecision(5) << std::fixed << sim_af1 << " "
-             << std::setprecision(5) << std::fixed << sim_z << std::endl;
+             << std::setprecision(5) << std::fixed << sim_af1 << " ";
+    if(z_defined) data_out << std::setprecision(5) << std::fixed << sim_z;
+    else          data_out << "NA";
+    data_out << std::endl;
   }
 
   data_out.close();
@@ -662,7 +687,9 @@ static void simulate_af1_z_impl(
 //' @param reference_pop_desc_file Character. Path to the population description
 //'   file.
 //' @param ref_out_file Character. Output file path. Space-separated columns:
-//'   `rsid chr bp a1 a2 sim_af1 sim_z`.
+//'   `rsid chr bp a1 a2 sim_af1 sim_z`. `sim_z` is `NA` for SNPs that are
+//'   monomorphic in the bootstrap sample, where the slope and its standard
+//'   error are undefined. Values are rounded to 5 decimal places.
 //'
 //' @return Invisibly returns `NULL`. Writes simulation results to
 //'   `ref_out_file`.
@@ -713,7 +740,9 @@ void simulate_af1_z_allchr(std::vector<std::string> pop_vec,
 //' @param reference_pop_desc_file Character. Path to the population description
 //'   file.
 //' @param ref_out_file Character. Output file path. Space-separated columns:
-//'   `rsid chr bp a1 a2 sim_af1 sim_z`.
+//'   `rsid chr bp a1 a2 sim_af1 sim_z`. `sim_z` is `NA` for SNPs that are
+//'   monomorphic in the bootstrap sample, where the slope and its standard
+//'   error are undefined. Values are rounded to 5 decimal places.
 //'
 //' @return Invisibly returns `NULL`. Writes simulation results to
 //'   `ref_out_file`.

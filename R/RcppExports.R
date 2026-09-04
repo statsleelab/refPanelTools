@@ -30,7 +30,7 @@ indexer <- function(reference_data_file, output_file) {
 #'
 #' Reads the BGZF-compressed reference genotype file and computes the
 #' alternate allele frequency (AF1) across all populations combined.
-#' AF1 is rounded up to 5 decimal places.
+#' AF1 is rounded to 5 decimal places.
 #'
 #' @param reference_data_file Character. Path to the BGZF-compressed reference
 #'   genotype file.
@@ -40,7 +40,7 @@ indexer <- function(reference_data_file, output_file) {
 #'   the AF1 value for the corresponding SNP.
 #'
 #' @return Invisibly returns \code{NULL}. Writes one AF1 value per line to
-#'   \code{output_file}.
+#'   \code{output_file}, rounded to 5 decimal places.
 #'
 #' @examples
 #' \dontrun{
@@ -178,7 +178,9 @@ extract_all_af1 <- function(chr_num, index_data_file, reference_data_file, refer
 #' @param reference_pop_desc_file Character. Path to the population description
 #'   file.
 #' @param ref_out_file Character. Output file path. Space-separated columns:
-#'   `rsid chr bp a1 a2 sim_af1 sim_z`.
+#'   `rsid chr bp a1 a2 sim_af1 sim_z`. `sim_z` is `NA` for SNPs that are
+#'   monomorphic in the bootstrap sample, where the slope and its standard
+#'   error are undefined. Values are rounded to 5 decimal places.
 #'
 #' @return Invisibly returns `NULL`. Writes simulation results to
 #'   `ref_out_file`.
@@ -221,7 +223,9 @@ simulate_af1_z_allchr <- function(pop_vec, num_sim_vec, index_data_file, referen
 #' @param reference_pop_desc_file Character. Path to the population description
 #'   file.
 #' @param ref_out_file Character. Output file path. Space-separated columns:
-#'   `rsid chr bp a1 a2 sim_af1 sim_z`.
+#'   `rsid chr bp a1 a2 sim_af1 sim_z`. `sim_z` is `NA` for SNPs that are
+#'   monomorphic in the bootstrap sample, where the slope and its standard
+#'   error are undefined. Values are rounded to 5 decimal places.
 #'
 #' @return Invisibly returns `NULL`. Writes simulation results to
 #'   `ref_out_file`.

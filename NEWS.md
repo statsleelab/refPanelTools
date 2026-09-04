@@ -21,6 +21,28 @@
   `-O2`; unoptimised builds (including `devtools::load_all()` / `document()`)
   failed with `symbol not found: _packInt16`. Now declared `static inline`.
 
+* `simulate_af1_z()` / `simulate_af1_z_allchr()`: the bootstrap sampling
+  indices are drawn from `[0, num_subj)` using the subject count declared in
+  the population description file, but the genotype string was indexed without
+  checking its actual length. A declared count larger than the real one read
+  past the end of the string -- undefined behaviour that silently produced
+  nonsense (for example a negative `sim_af1`). The declared and actual subject
+  counts are now required to agree, and a genotype record with too few fields
+  is an error.
+
+* `simulate_af1_z()` / `simulate_af1_z_allchr()`: SNPs that are monomorphic in
+  the bootstrap sample have `sxx == 0`, leaving the slope and its standard
+  error undefined; the literal string `nan` was written to `sim_z`. These are
+  now reported as `NA`. Monomorphic SNPs are common in reference panels.
+
+* `cal_af1ref()`, `simulate_af1_z()`, `simulate_af1_z_allchr()`: values were
+  passed through `std::ceil(x * 1e5) / 1e5`, which rounds up rather than to
+  nearest and shifts every value by +5e-06 on average. For example an AF1 of
+  0.4333333 was reported as 0.43334 instead of 0.43333. For Z-scores the
+  distortion is asymmetric, inflating positive values and shrinking negative
+  ones. Now uses `std::round()`. **Output files produced by earlier versions
+  differ in the fifth decimal place and should be regenerated.**
+
 ## New functions
 
 * `read_region()`: A convenience wrapper around `extract_reg_data()` that

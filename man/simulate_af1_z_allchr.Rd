@@ -33,7 +33,9 @@ genotype file.}
 file.}
 
 \item{ref_out_file}{Character. Output file path. Space-separated columns:
-\verb{rsid chr bp a1 a2 sim_af1 sim_z}.}
+\verb{rsid chr bp a1 a2 sim_af1 sim_z}. \code{sim_z} is \code{NA} for SNPs that are
+monomorphic in the bootstrap sample, where the slope and its standard
+error are undefined. Values are rounded to 5 decimal places.}
 }
 \value{
 Invisibly returns \code{NULL}. Writes simulation results to

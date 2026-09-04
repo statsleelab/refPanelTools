@@ -18,12 +18,12 @@ the AF1 value for the corresponding SNP.}
 }
 \value{
 Invisibly returns \code{NULL}. Writes one AF1 value per line to
-\code{output_file}.
+\code{output_file}, rounded to 5 decimal places.
 }
 \description{
 Reads the BGZF-compressed reference genotype file and computes the
 alternate allele frequency (AF1) across all populations combined.
-AF1 is rounded up to 5 decimal places.
+AF1 is rounded to 5 decimal places.
 }
 \examples{
 \dontrun{
