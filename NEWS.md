@@ -1,5 +1,14 @@
 # refPanelTools 1.1.0
 
+## Testing
+
+* Added a `testthat` suite (75 assertions) covering every exported function.
+  The BGZF fixtures are generated in `tests/testthat/helper-panel.R` rather
+  than checked in as binaries, so the panel format the C++ code expects is
+  written out in readable form. Each of the bugs fixed in this release has a
+  regression test, and those tests were checked against the unfixed code to
+  confirm they actually fail on it.
+
 ## Bug fixes
 
 * `simulate_af1_z()` / `simulate_af1_z_allchr()`: **`num_sim_vec` was matched to
