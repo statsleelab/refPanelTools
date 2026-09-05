@@ -21,7 +21,10 @@ extract_reg_data(
 
 \item{end_bp}{Integer. End base pair position (inclusive).}
 
-\item{num_pops}{Integer. Total number of populations in the reference panel.}
+\item{num_pops}{Integer. Total number of populations in the reference
+panel. Each genotype record must hold exactly \code{2 * num_pops}
+fields -- one genotype string and one AF1 value per population -- and a
+value that does not match the panel is an error.}
 
 \item{index_data_file}{Character. Path to the BGZF-compressed reference
 panel index file, whose columns are

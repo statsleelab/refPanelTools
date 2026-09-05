@@ -45,6 +45,13 @@
 
 ## Bug fixes
 
+* `extract_chr_data()` and `extract_reg_data()` accepted `num_pops` and then
+  ignored it, so a value that did not match the panel went unnoticed until the
+  output was parsed downstream, if at all. It is checked now: a genotype record
+  must hold exactly `2 * num_pops` fields. `cal_af1ref()` used `num_pops` but
+  did not check it, and a line with fewer fields left it dividing by a subject
+  count of zero; both are errors now.
+
 * BGZF handles were raw pointers closed only by falling off the end of a
   function, so every `Rcpp::stop()` in between leaked the descriptor and the
   block buffers behind it. The input validation added in this release made that

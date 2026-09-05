@@ -82,7 +82,10 @@ indexer <- function(reference_data_file, output_file) {
 #' @param reference_data_file Character. Path to the BGZF-compressed reference
 #'   genotype file.
 #' @param num_pops Integer. Total number of populations in the reference panel
-#'   (e.g. \code{29} for 33KG).
+#'   (e.g. \code{29} for 33KG). Each line of the genotype file must hold
+#'   exactly \code{2 * num_pops} fields -- one genotype string and one AF1
+#'   value per population -- and a value that does not match the panel is an
+#'   error.
 #' @param output_file Character. Path for the output file. Each line contains
 #'   the AF1 value for the corresponding SNP.
 #'
@@ -108,7 +111,10 @@ cal_af1ref <- function(reference_data_file, num_pops, output_file) {
 #' BGZF-compressed reference panel, using the index file to seek efficiently.
 #'
 #' @param chr_num Integer. Chromosome number (1--22).
-#' @param num_pops Integer. Total number of populations in the reference panel.
+#' @param num_pops Integer. Total number of populations in the reference
+#'   panel. Each genotype record must hold exactly \code{2 * num_pops}
+#'   fields -- one genotype string and one AF1 value per population -- and a
+#'   value that does not match the panel is an error.
 #' @param index_data_file Character. Path to the BGZF-compressed reference
 #'   panel index file, whose columns are
 #'   \code{rsid chr bp a1 a2 af1ref fpos}. This is not the two-column output of
@@ -323,7 +329,10 @@ simulate_af1_z <- function(chr_num, pop_vec, num_sim_vec, index_data_file, refer
 #' @param chr_num Integer. Chromosome number (1--22).
 #' @param start_bp Integer. Start base pair position (inclusive).
 #' @param end_bp Integer. End base pair position (inclusive).
-#' @param num_pops Integer. Total number of populations in the reference panel.
+#' @param num_pops Integer. Total number of populations in the reference
+#'   panel. Each genotype record must hold exactly \code{2 * num_pops}
+#'   fields -- one genotype string and one AF1 value per population -- and a
+#'   value that does not match the panel is an error.
 #' @param index_data_file Character. Path to the BGZF-compressed reference
 #'   panel index file, whose columns are
 #'   \code{rsid chr bp a1 a2 af1ref fpos}.

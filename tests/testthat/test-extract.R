@@ -99,3 +99,20 @@ test_that("indexer() records a byte offset and length for every line", {
   # and simulate_* functions consume (rsid chr bp a1 a2 af1ref fpos).
   expect_identical(ncol(got), 2L)
 })
+
+test_that("a num_pops that does not match the panel is an error", {
+  # num_pops used to be accepted and ignored by the extraction functions, so a
+  # wrong value went unnoticed until the output was parsed downstream.
+  wrong <- panel$num_pops + 1L
+  expect_error(extract_chr_data(1, wrong, panel$index, panel$geno, tempfile()),
+               "genotype fields, expected")
+  expect_error(extract_reg_data(1, 900, 1250, wrong, panel$index, panel$geno,
+                                tempfile()),
+               "genotype fields, expected")
+  expect_error(cal_af1ref(panel$geno, wrong, tempfile()),
+               "genotype fields, expected")
+
+  # the right value still works
+  expect_silent(extract_chr_data(1, panel$num_pops, panel$index, panel$geno,
+                                 tempfile()))
+})

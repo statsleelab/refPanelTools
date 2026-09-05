@@ -11,7 +11,10 @@ cal_af1ref(reference_data_file, num_pops, output_file)
 genotype file.}
 
 \item{num_pops}{Integer. Total number of populations in the reference panel
-(e.g. \code{29} for 33KG).}
+(e.g. \code{29} for 33KG). Each line of the genotype file must hold
+exactly \code{2 * num_pops} fields -- one genotype string and one AF1
+value per population -- and a value that does not match the panel is an
+error.}
 
 \item{output_file}{Character. Path for the output file. Each line contains
 the AF1 value for the corresponding SNP.}

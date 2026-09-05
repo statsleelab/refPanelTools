@@ -44,6 +44,22 @@ static void OpenOutputFile(std::ofstream& out, const std::string& path){
     Rcpp::stop("ERROR: can't open output file '" + path + "' for writing");
 }
 
+// Checks that a genotype record holds the num_pops genotype strings and
+// num_pops AF1 values the caller expects. num_pops was previously accepted and
+// ignored by the extraction functions, so a value that did not match the panel
+// went unnoticed until the output was parsed downstream -- or not at all.
+static void CheckGenoFieldCount(const std::string& data_line,
+                                const std::string& where, int num_pops){
+  std::istringstream buffer(data_line);
+  std::string tok;
+  int n = 0;
+  while(buffer >> tok) n++;
+  if(n != 2 * num_pops)
+    Rcpp::stop("ERROR: " + where + " has " + std::to_string(n) +
+               " genotype fields, expected " + std::to_string(2 * num_pops) +
+               " for " + std::to_string(num_pops) + " populations.");
+}
+
 // Parses one line of the reference panel index file, whose columns are
 //   rsid chr bp a1 a2 af1ref fpos
 // Returns false when the line names a chromosome that is not a number (X, Y,
@@ -183,7 +199,10 @@ void indexer(std::string reference_data_file,
 //' @param reference_data_file Character. Path to the BGZF-compressed reference
 //'   genotype file.
 //' @param num_pops Integer. Total number of populations in the reference panel
-//'   (e.g. \code{29} for 33KG).
+//'   (e.g. \code{29} for 33KG). Each line of the genotype file must hold
+//'   exactly \code{2 * num_pops} fields -- one genotype string and one AF1
+//'   value per population -- and a value that does not match the panel is an
+//'   error.
 //' @param output_file Character. Path for the output file. Each line contains
 //'   the AF1 value for the corresponding SNP.
 //'
@@ -210,12 +229,14 @@ void cal_af1ref(std::string reference_data_file,
   std::string line;
   double af1ref;
   int num_subj;
-  //int cc=0;
+  long long int line_no = 0;
   while(true){
     num_subj=0;
     last_char = BgzfGetLine(fp, line);
     if(last_char == -1)
       break;
+    line_no++;
+    CheckGenoFieldCount(line, "line " + std::to_string(line_no), num_pops);
     std::istringstream buffer(line);
     double allele_counter=0;
     for(int k=0; k<num_pops; k++){
@@ -226,12 +247,12 @@ void cal_af1ref(std::string reference_data_file,
         allele_counter += (double)(geno_str[i]-'0');
       }
     }
+    if(num_subj == 0)
+      Rcpp::stop("ERROR: line " + std::to_string(line_no) +
+                 " has no genotypes to compute an allele frequency from.");
     af1ref = allele_counter/(2*num_subj);
     af1ref = std::round(af1ref*100000.0)/100000.0;  //round to 5 decimal places
     outfile<<std::setprecision(5)<<std::fixed<<af1ref<<std::endl;
-    //cc++;
-    //if(cc>100)
-    //  break;
   }
   outfile.close();
 }
@@ -242,7 +263,10 @@ void cal_af1ref(std::string reference_data_file,
 //' BGZF-compressed reference panel, using the index file to seek efficiently.
 //'
 //' @param chr_num Integer. Chromosome number (1--22).
-//' @param num_pops Integer. Total number of populations in the reference panel.
+//' @param num_pops Integer. Total number of populations in the reference
+//'   panel. Each genotype record must hold exactly \code{2 * num_pops}
+//'   fields -- one genotype string and one AF1 value per population -- and a
+//'   value that does not match the panel is an error.
 //' @param index_data_file Character. Path to the BGZF-compressed reference
 //'   panel index file, whose columns are
 //'   \code{rsid chr bp a1 a2 af1ref fpos}. This is not the two-column output of
@@ -297,7 +321,7 @@ void extract_chr_data(int chr_num,
     if(chr==chr_num){
       bgzf_seek(fpd, fpos, SEEK_SET);
       BgzfGetLine(fpd, data_line);
-      //write data info
+      CheckGenoFieldCount(data_line, "SNP '" + rsid + "'", num_pops);
       data_out<<data_line<<std::endl;
     }
   }
@@ -878,7 +902,10 @@ void simulate_af1_z(int chr_num,
 //' @param chr_num Integer. Chromosome number (1--22).
 //' @param start_bp Integer. Start base pair position (inclusive).
 //' @param end_bp Integer. End base pair position (inclusive).
-//' @param num_pops Integer. Total number of populations in the reference panel.
+//' @param num_pops Integer. Total number of populations in the reference
+//'   panel. Each genotype record must hold exactly \code{2 * num_pops}
+//'   fields -- one genotype string and one AF1 value per population -- and a
+//'   value that does not match the panel is an error.
 //' @param index_data_file Character. Path to the BGZF-compressed reference
 //'   panel index file, whose columns are
 //'   \code{rsid chr bp a1 a2 af1ref fpos}.
@@ -936,7 +963,7 @@ void extract_reg_data(int chr_num,
     if(chr==chr_num && (bp >= start_bp && bp <= end_bp)){
       bgzf_seek(fpd, fpos, SEEK_SET);
       BgzfGetLine(fpd, data_line);
-      //write data info
+      CheckGenoFieldCount(data_line, "SNP '" + rsid + "'", num_pops);
       data_out<<data_line<<std::endl;
     }
   }
@@ -1013,18 +1040,11 @@ Rcpp::List read_reg_records(int chr_num,
       Rcpp::stop("ERROR: SNP '" + rsid + "' points past the end of the "
                  "genotype file; the index and genotype files may be out of sync.");
 
-    // A genotype record is num_pops genotype strings followed by num_pops AF1
-    // values. Counting the fields catches a num_pops that does not match the
-    // panel, which would otherwise shift every column silently.
+    CheckGenoFieldCount(data_line, "SNP '" + rsid + "'", num_pops);
     std::istringstream dbuf(data_line);
     std::vector<std::string> fields;
     std::string tok;
     while(dbuf >> tok) fields.push_back(tok);
-    if((int)fields.size() != 2 * num_pops)
-      Rcpp::stop("ERROR: SNP '" + rsid + "' has " +
-                 std::to_string(fields.size()) + " genotype fields, expected " +
-                 std::to_string(2 * num_pops) + " for " +
-                 std::to_string(num_pops) + " populations.");
 
     // extract_reg_data() already takes the range as int, so bp is expected to
     // fit; say so plainly rather than silently truncating.
