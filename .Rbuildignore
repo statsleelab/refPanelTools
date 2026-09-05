@@ -3,3 +3,5 @@
 ^README\.Rmd$
 ^tools$
 ^inst/dev-tests$
+^CLAUDE\.md$
+^README\.html$

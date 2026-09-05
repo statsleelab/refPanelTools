@@ -1,1 +1,3 @@
-# No additional compiler or linker flags are required.
+# bgzf.c uses zlib. R links zlib itself, so this builds without the flag on
+# most platforms, but state the dependency rather than rely on that.
+PKG_LIBS = -lz

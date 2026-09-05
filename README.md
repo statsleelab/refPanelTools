@@ -4,38 +4,100 @@
 # refPanelTools
 
 <!-- badges: start -->
+
 <!-- badges: end -->
 
-This package provides a collection of various tools for reference panel
-datasets created for GAUSS R package.
+**refPanelTools** provides tools for indexing, extracting, and
+simulating data from BGZF-compressed whole-genome sequencing reference
+panels (e.g. 33KG). It is designed to support downstream statistical
+genetics analyses such as population structure estimation and GWAS
+imputation.
 
 ## Installation
-
-You can install the development version of refPanelTools from
-[GitHub](https://github.com/statsleelab/refPanelTools) with:
 
 ``` r
 # install.packages("devtools")
 devtools::install_github("statsleelab/refPanelTools")
 ```
 
-## Example
+## Functions
 
-This is a basic example which shows you how to extract genotype
-information for a user-specified genomic region:
+| Function | Description |
+|----|----|
+| `indexer()` | Build a byte-offset index for a BGZF reference panel |
+| `cal_af1ref()` | Compute overall reference AF1 per SNP |
+| `extract_chr_data()` | Extract all SNPs for one chromosome |
+| `extract_chr_pop_data()` | Extract SNPs for one chromosome, specific populations |
+| `extract_all_af1()` | Extract per-population AF1 for one chromosome |
+| `extract_reg_data()` | Extract SNPs within a genomic region (file output) |
+| `read_region()` | Extract a genomic region and return a data.frame |
+| `simulate_af1_z()` | Simulate AF1 and association Z-scores for one chromosome |
+| `simulate_af1_z_allchr()` | Simulate AF1 and association Z-scores genome-wide |
+| `test_gz_file()` | Verify a BGZF file can be opened |
+
+## Example: extract a genomic region
+
+### File-based output (large regions)
 
 ``` r
 library(refPanelTools)
-chr.num <- 14
-start.bp <- 104000000
-end.bp   <- 104200000
-num.pops <- 29
-ref.index.file <- "/33KG/33kg_index.gz"
-ref.data.file <- "/33KG/33kg_geno.gz"
 
-# extract genotype data of a user-specified genomic region 
-data.output <- paste0("33kg_chr",chr.num,"_reg_geno")
-extract_reg_data(chr.num, start.bp, end.bp, num.pops, 
-                 ref.index.file, ref.data.file, 
-                 data.output)
+ref.index.file <- "/33KG/33kg_index.gz"
+ref.data.file  <- "/33KG/33kg_geno.gz"
+
+extract_reg_data(
+  chr_num             = 14,
+  start_bp            = 104000000,
+  end_bp              = 104200000,
+  num_pops            = 29,
+  index_data_file     = ref.index.file,
+  reference_data_file = ref.data.file,
+  ref_out_file        = "chr14_region_geno.txt"
+)
 ```
+
+### data.frame output (small regions)
+
+``` r
+df <- read_region(
+  chr_num             = 14,
+  start_bp            = 104000000,
+  end_bp              = 104200000,
+  index_data_file     = ref.index.file,
+  reference_data_file = ref.data.file,
+  pop_desc_file       = "/33KG/33kg_pop_desc.txt"
+)
+
+head(df[, c("rsid", "chr", "bp", "a1", "a2", "af1ref")])
+```
+
+## Example: simulate null Z-scores
+
+``` r
+simulate_af1_z(
+  chr_num                = 22,
+  pop_vec                = c("CEU", "YRI"),
+  num_sim_vec            = c(5000, 5000),
+  index_data_file        = ref.index.file,
+  reference_data_file    = ref.data.file,
+  reference_pop_desc_file = "/33KG/33kg_pop_desc.txt",
+  ref_out_file           = "chr22_sim_zscore.txt"
+)
+
+library(data.table)
+sim <- fread("chr22_sim_zscore.txt")
+hist(sim$sim_z)
+```
+
+## Reference panel data format
+
+The package works with BGZF-compressed genotype files where each line
+encodes one SNP across all populations. The companion index file records
+the byte offset (`fpos`) for each SNP, enabling fast random access.
+
+- **Index file** columns: `rsid chr bp a1 a2 af1ref fpos`
+- **Genotype file** columns: one genotype string per population (0/1/2
+  additive dosage, packed per subject), followed by per-population AF1
+  values
+- **Population description file** columns:
+  `pop_abb num_subj sup_pop_abb`
