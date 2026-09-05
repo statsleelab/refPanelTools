@@ -1,14 +1,15 @@
 #include <Rcpp.h>
-#include <string>
-#include <vector>
-#include <map>
 #include "bgzf.h"
-#include <fstream>
-#include <random>
 
-#include <iostream>
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <fstream>
+#include <iomanip>
+#include <numeric>
+#include <sstream>
+#include <string>
+#include <vector>
 
 using namespace Rcpp;
 
@@ -221,7 +222,7 @@ void cal_af1ref(std::string reference_data_file,
       std::string geno_str;
       buffer >> geno_str;
       num_subj += geno_str.length();
-      for(int i=0; i<geno_str.length(); i++){
+      for(size_t i=0; i<geno_str.length(); i++){
         allele_counter += (double)(geno_str[i]-'0');
       }
     }
@@ -347,7 +348,7 @@ void extract_chr_pop_data(int chr_num,
   
   // Read pop_vec and convert pops uppercase
   std::vector<std::string> pop_vec_input;
-  for(int i=0; i<pop_vec.size(); i++){
+  for(size_t i=0; i<pop_vec.size(); i++){
     std::string pop = pop_vec[i];
     std::transform(pop.begin(), pop.end(), pop.begin(), ::toupper); //make capital
     pop_vec_input.push_back(pop);
@@ -1091,6 +1092,17 @@ void test_gz_file(std::string gz_file){
 }
 
 
+//' Read the Genotype Record at a Byte Offset
+//'
+//' Seeks to a virtual file offset and returns the line found there. Useful for
+//' checking by hand that an index's \code{fpos} column points where it should.
+//'
+//' @param fpos Virtual file offset, as stored in the index file.
+//' @param reference_data_file Character. Path to the BGZF-compressed genotype
+//'   file.
+//'
+//' @return The genotype record at that offset, as a string.
+//'
 //' @name get_geno_info
 //' @keywords internal
 // [[Rcpp::export]]
@@ -1098,7 +1110,6 @@ std::string get_geno_info(int64_t fpos,
                    std::string reference_data_file){
 
   BgzfReader fp(reference_data_file, "reference data file");
-  Rcpp::Rcout << "fpos: " << fpos << std::endl;
   std::string line;
   bgzf_seek(fp, fpos, SEEK_SET);
   BgzfGetLine(fp, line);
@@ -1111,17 +1122,6 @@ std::string get_geno_info(int64_t fpos,
 
 
 
-//' @name largeval
-//' @keywords internal
-// [[Rcpp::export]]
-Rcpp::NumericVector largeval(int64_t val) {
-  //int64_t val = 9223372036854775807LL - 1;
-  Rcpp::Rcout << "C++ value: " << val << "\n";
-  Rcpp::NumericVector dbl(1);
-  std::memcpy(&(dbl[0]), &val, sizeof(double));
-  dbl.attr("class") = "integer64";
-  return dbl;
-}
 
 
 
@@ -1149,66 +1149,6 @@ int BgzfGetLine(BGZF* fp, std::string& line){
   return c;
 }
 
-void LoadProgressBar( int percent ){
-  std::string bar;
-  for(int i = 0; i < 50; i++){
-    if( i < (percent/2)){
-      bar.replace(i,1,"=");
-    }else if( i == (percent/2)){
-      bar.replace(i,1,">");
-    }else{
-      bar.replace(i,1," ");
-    }
-  }
-  Rcpp::Rcout << "\r" << percent << "%  " << "[" << bar << "] " << std::flush;
-}
 
 
-//' @name simulate_zscore
-//' @keywords internal
-// [[Rcpp::export]]
-void simulate_zscore(){
-  // Initialize vectors
-  std::vector<double> response(100);
-  std::vector<int> predictor(100);
-  
-  // Fill response vector with standard normal values
-  std::random_device rd;
-  std::mt19937 rng(rd());
-  std::normal_distribution<double> dist(0.0, 1.0);
-  
-  for (int i = 0; i < 100; i++) {
-    response[i] = dist(rng);
-  }
-  
-  // Fill predictor vector with (0, 1, 2) values
-  for (int i = 0; i < 100; i++) {
-    predictor[i] = i % 3;
-  }
-  
-  // Calculate the least square estimators of beta0 and beta1
-  double x_mean = accumulate(predictor.begin(), predictor.end(), 0.0) / predictor.size();
-  double y_mean = accumulate(response.begin(), response.end(), 0.0) / response.size();
-  double sum_xy = inner_product(predictor.begin(), predictor.end(), response.begin(), 0.0);
-  double sum_xx = inner_product(predictor.begin(), predictor.end(), predictor.begin(), 0.0);
-  double beta1 = (sum_xy - predictor.size() * x_mean * y_mean) / (sum_xx - predictor.size() * pow(x_mean, 2));
-  double beta0 = y_mean - beta1 * x_mean;
-  
-  // Calculate the standard error of beta1
-  double sum_residuals_squared = 0;
-  for (int i = 0; i < predictor.size(); i++) {
-    double residual = response[i] - (beta0 + beta1 * predictor[i]);
-    sum_residuals_squared += pow(residual, 2);
-  }
-  double mse = sum_residuals_squared / (predictor.size() - 2);
-  double std_err = sqrt(mse / sum_xx);
-  
-  // Calculate two-sided z-score for the regression coefficient
-  double z_c1 = beta1 / std_err;
-  //double p_c1 = 2 * (1 - gsl_cdf_tdist(fabs(t_c1), predictor.size() - 2));
-  //double z_c1 = gsl_cdf_gaussian_Pinv(p_c1 / 2, 1);
-  
-  // Print two-sided z-score for the regression coefficient
-  Rcpp::Rcout << "Two-sided z-score for the regression coefficient: " << z_c1 << std::endl;
-}
   

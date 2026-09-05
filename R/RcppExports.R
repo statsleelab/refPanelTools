@@ -401,21 +401,20 @@ test_gz_file <- function(gz_file) {
     invisible(.Call(`_refPanelTools_test_gz_file`, gz_file))
 }
 
+#' Read the Genotype Record at a Byte Offset
+#'
+#' Seeks to a virtual file offset and returns the line found there. Useful for
+#' checking by hand that an index's \code{fpos} column points where it should.
+#'
+#' @param fpos Virtual file offset, as stored in the index file.
+#' @param reference_data_file Character. Path to the BGZF-compressed genotype
+#'   file.
+#'
+#' @return The genotype record at that offset, as a string.
+#'
 #' @name get_geno_info
 #' @keywords internal
 get_geno_info <- function(fpos, reference_data_file) {
     .Call(`_refPanelTools_get_geno_info`, fpos, reference_data_file)
-}
-
-#' @name largeval
-#' @keywords internal
-largeval <- function(val) {
-    .Call(`_refPanelTools_largeval`, val)
-}
-
-#' @name simulate_zscore
-#' @keywords internal
-simulate_zscore <- function() {
-    invisible(.Call(`_refPanelTools_simulate_zscore`))
 }
 

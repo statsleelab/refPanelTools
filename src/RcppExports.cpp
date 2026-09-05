@@ -161,26 +161,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// largeval
-Rcpp::NumericVector largeval(int64_t val);
-RcppExport SEXP _refPanelTools_largeval(SEXP valSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int64_t >::type val(valSEXP);
-    rcpp_result_gen = Rcpp::wrap(largeval(val));
-    return rcpp_result_gen;
-END_RCPP
-}
-// simulate_zscore
-void simulate_zscore();
-RcppExport SEXP _refPanelTools_simulate_zscore() {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    simulate_zscore();
-    return R_NilValue;
-END_RCPP
-}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_refPanelTools_indexer", (DL_FUNC) &_refPanelTools_indexer, 2},
@@ -194,8 +174,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_refPanelTools_read_reg_records", (DL_FUNC) &_refPanelTools_read_reg_records, 6},
     {"_refPanelTools_test_gz_file", (DL_FUNC) &_refPanelTools_test_gz_file, 1},
     {"_refPanelTools_get_geno_info", (DL_FUNC) &_refPanelTools_get_geno_info, 2},
-    {"_refPanelTools_largeval", (DL_FUNC) &_refPanelTools_largeval, 1},
-    {"_refPanelTools_simulate_zscore", (DL_FUNC) &_refPanelTools_simulate_zscore, 0},
     {NULL, NULL, 0}
 };
 

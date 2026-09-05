@@ -9,6 +9,28 @@
   regression test, and those tests were checked against the unfixed code to
   confirm they actually fail on it.
 
+## Cleanup
+
+* Removed three unreachable functions: `simulate_zscore()` and `largeval()`
+  were debug scaffolding, and `LoadProgressBar()` was never called and would
+  have thrown `std::out_of_range` if it had been -- it calls `replace()` on an
+  empty string. Removing them also removed the last compiler warning and the
+  last uses of `<random>` and `<cstring>`.
+
+* `tools.cpp` relied on `Rcpp.h` to pull in `<sstream>`, `<iomanip>`,
+  `<algorithm>`, `<numeric>` and `<cstring>` transitively. The headers it
+  actually uses are now included directly, and `<map>` and `<iostream>`, which
+  nothing referenced, are gone. The two remaining signed/unsigned comparison
+  warnings are fixed, so the package compiles clean under `-Wall -Wextra`.
+
+* `get_geno_info()` has a title and a description, so `document()` no longer
+  skips it, and it no longer prints the offset it was given to the console.
+
+* `man/refPanelTools-package.Rd` predated roxygen2 and blocked it from writing
+  the package page. It is generated from `R/refPanelTools-package.R` now.
+
+* `DESCRIPTION` lists the maintainer address as leed13@miamioh.edu.
+
 ## Documentation
 
 * `indexer()`'s documentation described it as producing the index the other

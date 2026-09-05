@@ -3,7 +3,7 @@ Type: Package
 Title: Tools for Reference Panel Datasets
 Version: 1.1.0
 Date: 2026-09-04
-Authors@R: person("Donghyung", "Lee", email = "dustorm@gmail.com",
+Authors@R: person("Donghyung", "Lee", email = "leed13@miamioh.edu",
     role = c("aut", "cre"))
 Description: Provides tools for indexing, extracting, and simulating data from
     BGZF-compressed whole-genome sequencing reference panel datasets such as
