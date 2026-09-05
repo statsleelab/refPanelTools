@@ -1,13 +1,12 @@
 #' Extract Genomic Region Data as a Data Frame
 #'
-#' A convenience wrapper around [extract_reg_data()] that returns the extracted
-#' data as a data.frame, combining SNP metadata from the index file with
-#' genotype strings and per-population allele frequencies.
+#' Returns the SNPs in a base-pair range as a data.frame, combining metadata
+#' from the index file with genotype strings and per-population allele
+#' frequencies.
 #'
-#' The raw output of [extract_reg_data()] contains one row per SNP with
-#' space-separated genotype strings (one per population) followed by
-#' per-population AF1 values. This wrapper parses that output and attaches
-#' SNP metadata (rsid, chr, bp, a1, a2) from the index file.
+#' Metadata and genotype records are collected together in a single pass over
+#' the index, so the cost is proportional to the size of the region rather than
+#' the size of the index.
 #'
 #' @param chr_num Integer. Chromosome number (1--22).
 #' @param start_bp Integer. Start base pair position (inclusive).
@@ -30,13 +29,17 @@
 #'     \item{bp}{Base pair position.}
 #'     \item{a1, a2}{Reference and alternate alleles.}
 #'     \item{af1ref}{Overall reference panel AF1.}
-#'     \item{geno_<pop>}{Genotype string for each population (0/1/2 per subject,
-#'       packed as a single character string).}
-#'     \item{af1_<pop>}{Allele frequency of alternate allele for each population.}
+#'     \item{geno_<pop>}{Character. Genotype string for each population (0/1/2
+#'       per subject, packed as a single string; leading zeros are preserved).}
+#'     \item{af1_<pop>}{Numeric. Alternate allele frequency for each population.}
 #'   }
-#'   Returns an empty data.frame if no SNPs fall in the requested region.
+#'   A region holding no SNPs gives a data.frame with zero rows and these same
+#'   columns, so results from several regions can be combined with `rbind()`
+#'   without special-casing the empty result.
 #'
-#' @seealso [extract_reg_data()] for the underlying file-based function.
+#' @seealso [extract_reg_data()] to write the genotype records to a file
+#'   instead, which is the better choice for a region too large to hold in
+#'   memory.
 #'
 #' @importFrom utils read.table
 #' @examples
@@ -68,41 +71,22 @@ read_region <- function(chr_num, start_bp, end_bp,
     pop_names <- paste0("pop", seq_len(num_pops))
   }
 
-  # Extract genotype data to a temp file, then read it back
-  tmp <- tempfile(fileext = ".txt")
-  on.exit(unlink(tmp), add = TRUE)
+  rec <- read_reg_records(chr_num, start_bp, end_bp, num_pops,
+                          index_data_file, reference_data_file)
 
-  extract_reg_data(chr_num, start_bp, end_bp, num_pops,
-                   index_data_file, reference_data_file, tmp)
+  geno <- as.data.frame(rec$geno, stringsAsFactors = FALSE)
+  af1  <- as.data.frame(rec$af1)
+  names(geno) <- paste0("geno_", pop_names)
+  names(af1)  <- paste0("af1_",  pop_names)
 
-  if (file.info(tmp)$size == 0L)
-    return(data.frame())
-
-  geno_data <- read.table(tmp, header = FALSE, sep = "",
-                          colClasses = "character")
-
-  colnames(geno_data) <- c(paste0("geno_", pop_names),
-                            paste0("af1_",  pop_names))
-
-  # Read SNP metadata from the index file and filter to the requested region
-  # Tip: data.table::fread() is significantly faster for large index files
-  idx <- read.table(index_data_file, header = FALSE, sep = "",
-                    col.names   = c("rsid", "chr", "bp",
-                                    "a1", "a2", "af1ref", "fpos"),
-                    colClasses  = c("character", "integer", "integer",
-                                    "character", "character", "numeric",
-                                    "numeric"))
-  snp_meta <- idx[idx$chr == chr_num &
-                  idx$bp  >= start_bp &
-                  idx$bp  <= end_bp,
-                  c("rsid", "chr", "bp", "a1", "a2", "af1ref"),
-                  drop = FALSE]
-  rownames(snp_meta) <- NULL
-
-  if (nrow(snp_meta) != nrow(geno_data))
-    stop("Row count mismatch between index (", nrow(snp_meta),
-         ") and genotype data (", nrow(geno_data),
-         "). The index and genotype files may be out of sync.")
-
-  cbind(snp_meta, geno_data)
+  cbind(
+    data.frame(rsid   = rec$rsid,
+               chr    = rec$chr,
+               bp     = rec$bp,
+               a1     = rec$a1,
+               a2     = rec$a2,
+               af1ref = rec$af1ref,
+               stringsAsFactors = FALSE),
+    geno, af1
+  )
 }

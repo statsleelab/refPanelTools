@@ -981,6 +981,136 @@ void extract_reg_data(int chr_num,
 
 
 
+//' Read a Genomic Region into R
+//'
+//' Backs \code{\link{read_region}}. Returns the SNP metadata and the genotype
+//' records for a region together, in one pass over the index.
+//'
+//' \code{\link{extract_reg_data}} discards the metadata it has already parsed
+//' and writes only the genotype records, which leaves the caller re-reading the
+//' whole index in R to recover it. Here the fields are kept as they are parsed,
+//' so the cost is proportional to the region rather than to the index.
+//'
+//' @param chr_num Integer. Chromosome number.
+//' @param start_bp,end_bp Integer. Inclusive base pair range.
+//' @param num_pops Integer. Number of populations in the panel. Each genotype
+//'   record must hold exactly \code{2 * num_pops} fields.
+//' @param index_data_file,reference_data_file Character. Paths to the
+//'   BGZF-compressed index and genotype files.
+//'
+//' @return A list with \code{rsid}, \code{chr}, \code{bp}, \code{a1},
+//'   \code{a2}, \code{af1ref} (\code{bp} as an integer), a character matrix
+//'   \code{geno} and a numeric
+//'   matrix \code{af1}, both with one row per SNP and one column per
+//'   population. Zero-length for a region holding no SNPs.
+//'
+//' @name read_reg_records
+//' @keywords internal
+// [[Rcpp::export]]
+Rcpp::List read_reg_records(int chr_num,
+                            int start_bp,
+                            int end_bp,
+                            int num_pops,
+                            std::string index_data_file,
+                            std::string reference_data_file){
+
+  if(num_pops <= 0)
+    Rcpp::stop("ERROR: num_pops must be positive.");
+  if(start_bp > end_bp)
+    Rcpp::stop("ERROR: start_bp must not be greater than end_bp.");
+
+  BGZF* fpi = bgzf_open(index_data_file.c_str(), "r");
+  if(!fpi)
+    Rcpp::stop("ERROR: can't open index data file '"+index_data_file+"'");
+  BGZF* fpd = bgzf_open(reference_data_file.c_str(), "r");
+  if(!fpd){
+    bgzf_close(fpi);
+    Rcpp::stop("ERROR: can't open reference data file '"+reference_data_file+"'");
+  }
+
+  std::vector<std::string> rsid_vec, a1_vec, a2_vec;
+  std::vector<int>         chr_vec, bp_vec;
+  std::vector<double>      af1ref_vec;
+  std::vector<std::string> geno_flat;   // row-major, num_pops per SNP
+  std::vector<double>      af1_flat;
+
+  int last_char;
+  std::string index_line, data_line;
+  std::string rsid, a1, a2;
+  int chr;
+  double af1ref;
+  long long int bp, fpos;
+
+  while(true){
+    last_char = BgzfGetLine(fpi, index_line);
+    if(last_char == -1) break;
+
+    if(!ParseIndexLine(index_line, rsid, chr, bp, a1, a2, af1ref, fpos))
+      continue;   // chromosome is not a number; cannot be selected here
+
+    if(chr != chr_num || bp < start_bp || bp > end_bp) continue;
+
+    bgzf_seek(fpd, fpos, SEEK_SET);
+    if(BgzfGetLine(fpd, data_line) == -1)
+      Rcpp::stop("ERROR: SNP '" + rsid + "' points past the end of the "
+                 "genotype file; the index and genotype files may be out of sync.");
+
+    // A genotype record is num_pops genotype strings followed by num_pops AF1
+    // values. Counting the fields catches a num_pops that does not match the
+    // panel, which would otherwise shift every column silently.
+    std::istringstream dbuf(data_line);
+    std::vector<std::string> fields;
+    std::string tok;
+    while(dbuf >> tok) fields.push_back(tok);
+    if((int)fields.size() != 2 * num_pops)
+      Rcpp::stop("ERROR: SNP '" + rsid + "' has " +
+                 std::to_string(fields.size()) + " genotype fields, expected " +
+                 std::to_string(2 * num_pops) + " for " +
+                 std::to_string(num_pops) + " populations.");
+
+    // extract_reg_data() already takes the range as int, so bp is expected to
+    // fit; say so plainly rather than silently truncating.
+    if(bp < 0 || bp > 2147483647LL)
+      Rcpp::stop("ERROR: base pair position " + std::to_string(bp) + " for SNP '" +
+                 rsid + "' is outside the representable range.");
+
+    rsid_vec.push_back(rsid);
+    chr_vec.push_back(chr);
+    bp_vec.push_back((int)bp);
+    a1_vec.push_back(a1);
+    a2_vec.push_back(a2);
+    af1ref_vec.push_back(af1ref);
+    for(int k = 0; k < num_pops; k++)
+      geno_flat.push_back(fields[k]);
+    for(int k = 0; k < num_pops; k++)
+      af1_flat.push_back(std::atof(fields[num_pops + k].c_str()));
+  }
+
+  bgzf_close(fpi);
+  bgzf_close(fpd);
+
+  int n = (int)rsid_vec.size();
+  Rcpp::CharacterMatrix geno(n, num_pops);
+  Rcpp::NumericMatrix   af1(n, num_pops);
+  for(int i = 0; i < n; i++){
+    for(int k = 0; k < num_pops; k++){
+      geno(i, k) = geno_flat[(size_t)i * num_pops + k];
+      af1(i, k)  = af1_flat[(size_t)i * num_pops + k];
+    }
+  }
+
+  return Rcpp::List::create(
+    Rcpp::Named("rsid")   = Rcpp::wrap(rsid_vec),
+    Rcpp::Named("chr")    = Rcpp::wrap(chr_vec),
+    Rcpp::Named("bp")     = Rcpp::wrap(bp_vec),
+    Rcpp::Named("a1")     = Rcpp::wrap(a1_vec),
+    Rcpp::Named("a2")     = Rcpp::wrap(a2_vec),
+    Rcpp::Named("af1ref") = Rcpp::wrap(af1ref_vec),
+    Rcpp::Named("geno")   = geno,
+    Rcpp::Named("af1")    = af1);
+}
+
+
 //' Test Whether a BGZF File Can Be Opened
 //'
 //' Opens the specified BGZF-compressed file, reads the first line, prints it

@@ -23,6 +23,28 @@
 
 ## Bug fixes
 
+* `read_region()` read the entire index file with `read.table()` on every
+  call, so the cost tracked the size of the index rather than the size of the
+  region: a 40-SNP window cost the same as a 40,000-SNP one. The metadata it
+  was recovering had already been parsed on the C++ side and thrown away. A new
+  internal `read_reg_records()` keeps those fields as it parses them and
+  returns them with the genotypes in one pass, and `read_region()` no longer
+  touches the index from R. Measured 3.4x faster on an 800,000-row index, with
+  the memory for the index copy gone.
+
+* `read_region()` returned the `af1_*` columns as character, because the
+  `colClasses = "character"` needed to protect genotype strings from losing
+  their leading zeros was applied to every column. They are numeric now;
+  genotype strings are still character.
+
+* `read_region()` returned a bare `data.frame()` with no columns when a region
+  held no SNPs, so `$rsid` and `rbind()` across regions broke on the empty
+  case. It now returns zero rows with the same columns as a non-empty result.
+
+* `read_region()` now rejects a `num_pops` that does not match the panel --
+  which would otherwise shift every genotype and AF1 column -- and a reversed
+  base-pair range.
+
 * The index file was parsed with unchecked `>>` extractions, turning two
   realistic ways of corrupting an index into wrong answers rather than errors.
   A truncated line left `fpos` at 0, so the SNP stored at offset 0 was emitted

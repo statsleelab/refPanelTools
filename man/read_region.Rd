@@ -43,22 +43,23 @@ A data.frame with one row per SNP in the region and columns:
 \item{bp}{Base pair position.}
 \item{a1, a2}{Reference and alternate alleles.}
 \item{af1ref}{Overall reference panel AF1.}
-\item{geno_\if{html}{\out{<pop>}}}{Genotype string for each population (0/1/2 per subject,
-packed as a single character string).}
-\item{af1_\if{html}{\out{<pop>}}}{Allele frequency of alternate allele for each population.}
+\item{geno_\if{html}{\out{<pop>}}}{Character. Genotype string for each population (0/1/2
+per subject, packed as a single string; leading zeros are preserved).}
+\item{af1_\if{html}{\out{<pop>}}}{Numeric. Alternate allele frequency for each population.}
 }
-Returns an empty data.frame if no SNPs fall in the requested region.
+A region holding no SNPs gives a data.frame with zero rows and these same
+columns, so results from several regions can be combined with \code{rbind()}
+without special-casing the empty result.
 }
 \description{
-A convenience wrapper around \code{\link[=extract_reg_data]{extract_reg_data()}} that returns the extracted
-data as a data.frame, combining SNP metadata from the index file with
-genotype strings and per-population allele frequencies.
+Returns the SNPs in a base-pair range as a data.frame, combining metadata
+from the index file with genotype strings and per-population allele
+frequencies.
 }
 \details{
-The raw output of \code{\link[=extract_reg_data]{extract_reg_data()}} contains one row per SNP with
-space-separated genotype strings (one per population) followed by
-per-population AF1 values. This wrapper parses that output and attaches
-SNP metadata (rsid, chr, bp, a1, a2) from the index file.
+Metadata and genotype records are collected together in a single pass over
+the index, so the cost is proportional to the size of the region rather than
+the size of the index.
 }
 \examples{
 \dontrun{
@@ -74,5 +75,7 @@ head(df[, c("rsid", "chr", "bp", "a1", "a2", "af1ref")])
 }
 }
 \seealso{
-\code{\link[=extract_reg_data]{extract_reg_data()}} for the underlying file-based function.
+\code{\link[=extract_reg_data]{extract_reg_data()}} to write the genotype records to a file
+instead, which is the better choice for a region too large to hold in
+memory.
 }

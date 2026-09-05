@@ -352,6 +352,35 @@ extract_reg_data <- function(chr_num, start_bp, end_bp, num_pops, index_data_fil
     invisible(.Call(`_refPanelTools_extract_reg_data`, chr_num, start_bp, end_bp, num_pops, index_data_file, reference_data_file, ref_out_file))
 }
 
+#' Read a Genomic Region into R
+#'
+#' Backs \code{\link{read_region}}. Returns the SNP metadata and the genotype
+#' records for a region together, in one pass over the index.
+#'
+#' \code{\link{extract_reg_data}} discards the metadata it has already parsed
+#' and writes only the genotype records, which leaves the caller re-reading the
+#' whole index in R to recover it. Here the fields are kept as they are parsed,
+#' so the cost is proportional to the region rather than to the index.
+#'
+#' @param chr_num Integer. Chromosome number.
+#' @param start_bp,end_bp Integer. Inclusive base pair range.
+#' @param num_pops Integer. Number of populations in the panel. Each genotype
+#'   record must hold exactly \code{2 * num_pops} fields.
+#' @param index_data_file,reference_data_file Character. Paths to the
+#'   BGZF-compressed index and genotype files.
+#'
+#' @return A list with \code{rsid}, \code{chr}, \code{bp}, \code{a1},
+#'   \code{a2}, \code{af1ref} (\code{bp} as an integer), a character matrix
+#'   \code{geno} and a numeric
+#'   matrix \code{af1}, both with one row per SNP and one column per
+#'   population. Zero-length for a region holding no SNPs.
+#'
+#' @name read_reg_records
+#' @keywords internal
+read_reg_records <- function(chr_num, start_bp, end_bp, num_pops, index_data_file, reference_data_file) {
+    .Call(`_refPanelTools_read_reg_records`, chr_num, start_bp, end_bp, num_pops, index_data_file, reference_data_file)
+}
+
 #' Test Whether a BGZF File Can Be Opened
 #'
 #' Opens the specified BGZF-compressed file, reads the first line, prints it

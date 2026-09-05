@@ -11,6 +11,15 @@
 # raw deflate stream, then CRC32 and ISIZE. R has no raw-deflate or CRC32
 # primitive, so both are lifted out of a gzip stream written by gzfile().
 bgzf_block <- function(payload) {
+  # A BGZF block holds at most 64 KB either side of the compression: the reader
+  # inflates into a fixed 64 KB buffer, and BSIZE is a 16-bit field. Exceeding
+  # the first makes inflate fail, the second wraps silently; both surface as
+  # "this file is not BGZF", which is a confusing way to learn the block is
+  # simply too big.
+  if (length(payload) > 65535L)
+    stop("BGZF payload too large (", length(payload),
+         " bytes uncompressed); lower lines_per_block")
+
   tmp <- tempfile()
   on.exit(unlink(tmp), add = TRUE)
   con <- gzfile(tmp, "wb")
@@ -22,6 +31,9 @@ bgzf_block <- function(payload) {
   trailer <- gz[(length(gz) - 7):length(gz)]  # CRC32 + ISIZE, already LE
 
   bsize <- 18L + length(deflate) + 8L - 1L    # total block size minus one
+  if (bsize > 65535L)
+    stop("BGZF block too large (", bsize + 1L, " bytes compressed); ",
+         "lower lines_per_block")
   header <- as.raw(c(
     0x1f, 0x8b, 0x08, 0x04,                   # magic, deflate, FEXTRA
     0x00, 0x00, 0x00, 0x00,                   # MTIME

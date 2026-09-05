@@ -42,10 +42,47 @@ test_that("read_region() needs either a description file or num_pops", {
                "pop_desc_file.*num_pops")
 })
 
-test_that("read_region() returns no rows for an empty region", {
-  got <- read_region(1, 1, 2, panel$index, panel$geno,
+test_that("read_region() returns AF1 columns as numbers", {
+  # colClasses = "character" used to be applied to every column to protect the
+  # genotype strings, which left the AF1 columns as text.
+  got <- read_region(1, 900, 1250, panel$index, panel$geno,
                      pop_desc_file = panel$pop_desc)
-  expect_identical(nrow(got), 0L)
+  expect_type(got$af1_POPA, "double")
+  expect_type(got$af1_POPC, "double")
+  expect_equal(got$af1_POPA, c(0.375, 0.5, 0))
+  expect_equal(got$af1_POPC, c(0.5, 0.5, 0))
+  expect_type(got$af1ref, "double")
+  expect_type(got$bp, "integer")
+})
+
+test_that("an empty region keeps the columns of a non-empty one", {
+  # A bare data.frame() used to come back, with no columns at all, so df$rsid
+  # and rbind() across regions broke on the empty case.
+  full  <- read_region(1, 900, 1250, panel$index, panel$geno,
+                       pop_desc_file = panel$pop_desc)
+  empty <- read_region(1, 1, 2, panel$index, panel$geno,
+                       pop_desc_file = panel$pop_desc)
+
+  expect_identical(nrow(empty), 0L)
+  expect_identical(names(empty), names(full))
+  expect_identical(vapply(empty, class, character(1)),
+                   vapply(full,  class, character(1)))
+  expect_identical(nrow(rbind(full, empty)), nrow(full))
+  expect_identical(empty$rsid, character(0))
+})
+
+test_that("read_region() rejects a num_pops the panel does not match", {
+  # Getting this wrong would otherwise shift every genotype and AF1 column.
+  expect_error(
+    read_region(1, 900, 1250, panel$index, panel$geno, num_pops = 2L),
+    "genotype fields, expected"
+  )
+})
+
+test_that("read_region() rejects a reversed range", {
+  expect_error(read_region(1, 1250, 900, panel$index, panel$geno,
+                           num_pops = panel$num_pops),
+               "start_bp must not be greater than end_bp")
 })
 
 test_that("read_region() agrees with extract_reg_data()", {

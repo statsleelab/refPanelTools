@@ -123,6 +123,22 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// read_reg_records
+Rcpp::List read_reg_records(int chr_num, int start_bp, int end_bp, int num_pops, std::string index_data_file, std::string reference_data_file);
+RcppExport SEXP _refPanelTools_read_reg_records(SEXP chr_numSEXP, SEXP start_bpSEXP, SEXP end_bpSEXP, SEXP num_popsSEXP, SEXP index_data_fileSEXP, SEXP reference_data_fileSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type chr_num(chr_numSEXP);
+    Rcpp::traits::input_parameter< int >::type start_bp(start_bpSEXP);
+    Rcpp::traits::input_parameter< int >::type end_bp(end_bpSEXP);
+    Rcpp::traits::input_parameter< int >::type num_pops(num_popsSEXP);
+    Rcpp::traits::input_parameter< std::string >::type index_data_file(index_data_fileSEXP);
+    Rcpp::traits::input_parameter< std::string >::type reference_data_file(reference_data_fileSEXP);
+    rcpp_result_gen = Rcpp::wrap(read_reg_records(chr_num, start_bp, end_bp, num_pops, index_data_file, reference_data_file));
+    return rcpp_result_gen;
+END_RCPP
+}
 // test_gz_file
 void test_gz_file(std::string gz_file);
 RcppExport SEXP _refPanelTools_test_gz_file(SEXP gz_fileSEXP) {
@@ -175,6 +191,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_refPanelTools_simulate_af1_z_allchr", (DL_FUNC) &_refPanelTools_simulate_af1_z_allchr, 6},
     {"_refPanelTools_simulate_af1_z", (DL_FUNC) &_refPanelTools_simulate_af1_z, 7},
     {"_refPanelTools_extract_reg_data", (DL_FUNC) &_refPanelTools_extract_reg_data, 7},
+    {"_refPanelTools_read_reg_records", (DL_FUNC) &_refPanelTools_read_reg_records, 6},
     {"_refPanelTools_test_gz_file", (DL_FUNC) &_refPanelTools_test_gz_file, 1},
     {"_refPanelTools_get_geno_info", (DL_FUNC) &_refPanelTools_get_geno_info, 2},
     {"_refPanelTools_largeval", (DL_FUNC) &_refPanelTools_largeval, 1},
