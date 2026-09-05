@@ -9,6 +9,19 @@
   regression test, and those tests were checked against the unfixed code to
   confirm they actually fail on it.
 
+## Packaging
+
+* Added `inst/COPYRIGHTS`. The bundled BGZF reader (`src/bgzf.c`, `src/bgzf.h`)
+  and `src/khash.h` are MIT-licensed code from SAMtools/htslib and Attractive
+  Chaos, inside a package distributed under GPL (>= 2); the file records that
+  and the two modifications made to `bgzf.c`.
+
+* `src/Makevars` links zlib explicitly (`PKG_LIBS = -lz`) rather than relying
+  on R having linked it, and `DESCRIPTION` declares `SystemRequirements: zlib`.
+
+* Removed `src/indexer.o`, a stale object file from 2021 left by a source file
+  that no longer exists.
+
 ## Cleanup
 
 * Removed three unreachable functions: `simulate_zscore()` and `largeval()`
