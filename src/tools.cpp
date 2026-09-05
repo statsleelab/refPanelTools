@@ -14,6 +14,26 @@ using namespace Rcpp;
 
 int BgzfGetLine(BGZF* fp, std::string& line);
 
+// Owns a BGZF handle for the lifetime of a scope. bgzf_close() used to be
+// reached only by falling off the end of a function, so any Rcpp::stop() in
+// between leaked the descriptor and the block buffers behind it -- routine now
+// that the index and genotype records are validated as they are read.
+class BgzfReader {
+public:
+  BgzfReader(const std::string& path, const std::string& what)
+    : fp_(bgzf_open(path.c_str(), "r")){
+    if(!fp_)
+      Rcpp::stop("ERROR: can't open " + what + " '" + path + "'");
+  }
+  ~BgzfReader(){ if(fp_) bgzf_close(fp_); }
+  operator BGZF*() const { return fp_; }
+  BGZF* operator->() const { return fp_; }   // bgzf_tell() is a macro using fp->
+private:
+  BGZF* fp_;
+  BgzfReader(const BgzfReader&);
+  BgzfReader& operator=(const BgzfReader&);
+};
+
 // Opens an output file, failing loudly. std::ofstream reports nothing on its
 // own, so an unwritable path used to look like a successful run that produced
 // an empty file.
@@ -135,14 +155,9 @@ static bool ParseIndexLine(const std::string& index_line,
 void indexer(std::string reference_data_file,
              std::string output_file){
   
-  BGZF* fp = bgzf_open(reference_data_file.c_str(), "r");
+  BgzfReader fp(reference_data_file, "reference data file");
   std::ofstream outfile;
   OpenOutputFile(outfile, output_file);
-  
-  if(!fp){
-    
-    Rcpp::stop("ERROR: can't open reference data file '"+reference_data_file+"'");
-  }
   int last_char;
   std::string line;
   long long int fpos;
@@ -156,7 +171,6 @@ void indexer(std::string reference_data_file,
   }
   
   outfile.close();
-  bgzf_close(fp);
 }
 
 //' Compute Overall Reference Allele Frequency (AF1) per SNP
@@ -188,13 +202,9 @@ void indexer(std::string reference_data_file,
 void cal_af1ref(std::string reference_data_file,
                  int num_pops,
                  std::string output_file){
-  BGZF* fp = bgzf_open(reference_data_file.c_str(), "r");
+  BgzfReader fp(reference_data_file, "reference data file");
   std::ofstream outfile;
   OpenOutputFile(outfile, output_file);
-  if(!fp){
-    
-    Rcpp::stop("ERROR: can't open reference data file '"+reference_data_file+"'");
-  }
   int last_char;
   std::string line;
   double af1ref;
@@ -223,7 +233,6 @@ void cal_af1ref(std::string reference_data_file,
     //  break;
   }
   outfile.close();
-  bgzf_close(fp);
 }
 
 //' Extract Genotype Data for a Single Chromosome
@@ -263,16 +272,8 @@ void extract_chr_data(int chr_num,
                       std::string reference_data_file,
                       std::string ref_out_file){
   
-  BGZF* fpi = bgzf_open(index_data_file.c_str(), "r");
-  if(!fpi){
-    
-    Rcpp::stop("ERROR: can't open index data file '"+index_data_file+"'");
-  }
-  BGZF* fpd = bgzf_open(reference_data_file.c_str(), "r");
-  if(!fpd){
-    
-    Rcpp::stop("ERROR: can't open reference data file '"+reference_data_file+"'");
-  }
+  BgzfReader fpi(index_data_file, "index data file");
+  BgzfReader fpd(reference_data_file, "reference data file");
   
   std::ofstream data_out;
   OpenOutputFile(data_out, ref_out_file);
@@ -300,8 +301,6 @@ void extract_chr_data(int chr_num,
     }
   }
   data_out.close();
-  bgzf_close(fpi);
-  bgzf_close(fpd);
 }
 
 //' Extract Genotype Data for Specific Populations on One Chromosome
@@ -392,16 +391,8 @@ void extract_chr_pop_data(int chr_num,
     }
   }
   
-  BGZF* fpi = bgzf_open(index_data_file.c_str(), "r");
-  if(!fpi){
-    
-    Rcpp::stop("ERROR: can't open index data file '"+index_data_file+"'");
-  }
-  BGZF* fpd = bgzf_open(reference_data_file.c_str(), "r");
-  if(!fpd){
-    
-    Rcpp::stop("ERROR: can't open reference data file '"+reference_data_file+"'");
-  }
+  BgzfReader fpi(index_data_file, "index data file");
+  BgzfReader fpd(reference_data_file, "reference data file");
     
   std::ofstream data_out;
   OpenOutputFile(data_out, ref_out_file);
@@ -445,8 +436,6 @@ void extract_chr_pop_data(int chr_num,
     }
   }
   data_out.close();
-  bgzf_close(fpi);
-  bgzf_close(fpd);
   
 }
 
@@ -516,16 +505,8 @@ void extract_all_af1(int chr_num,
   num_pops=ref_pop_vec.size();
   in_ref_desc.close();
   
-  BGZF* fpi = bgzf_open(index_data_file.c_str(), "r");
-  if(!fpi){
-    
-    Rcpp::stop("ERROR: can't open index data file '"+index_data_file+"'");
-  }
-  BGZF* fpd = bgzf_open(reference_data_file.c_str(), "r");
-  if(!fpd){
-    
-    Rcpp::stop("ERROR: can't open reference data file '"+reference_data_file+"'");
-  }
+  BgzfReader fpi(index_data_file, "index data file");
+  BgzfReader fpd(reference_data_file, "reference data file");
   
   std::ofstream data_out;
   OpenOutputFile(data_out, ref_out_file);
@@ -566,8 +547,6 @@ void extract_all_af1(int chr_num,
     }
   }
   data_out.close();
-  bgzf_close(fpi);
-  bgzf_close(fpd);
 }
 
 
@@ -649,12 +628,8 @@ static void simulate_af1_z_impl(
                "least 3 to compute an association Z-score.");
 
   // Open BGZF files
-  BGZF* fpi = bgzf_open(index_data_file.c_str(), "r");
-  if(!fpi)
-    Rcpp::stop("ERROR: can't open index data file '" + index_data_file + "'");
-  BGZF* fpd = bgzf_open(reference_data_file.c_str(), "r");
-  if(!fpd)
-    Rcpp::stop("ERROR: can't open reference data file '" + reference_data_file + "'");
+  BgzfReader fpi(index_data_file, "index data file");
+  BgzfReader fpd(reference_data_file, "reference data file");
 
   std::ofstream data_out;
   OpenOutputFile(data_out, ref_out_file);
@@ -768,8 +743,6 @@ static void simulate_af1_z_impl(
   }
 
   data_out.close();
-  bgzf_close(fpi);
-  bgzf_close(fpd);
 }
 
 
@@ -938,16 +911,8 @@ void extract_reg_data(int chr_num,
                       std::string reference_data_file,
                       std::string ref_out_file){
   
-  BGZF* fpi = bgzf_open(index_data_file.c_str(), "r");
-  if(!fpi){
-    
-    Rcpp::stop("ERROR: can't open index data file '"+index_data_file+"'");
-  }
-  BGZF* fpd = bgzf_open(reference_data_file.c_str(), "r");
-  if(!fpd){
-    
-    Rcpp::stop("ERROR: can't open reference data file '"+reference_data_file+"'");
-  }
+  BgzfReader fpi(index_data_file, "index data file");
+  BgzfReader fpd(reference_data_file, "reference data file");
   
   std::ofstream data_out;
   OpenOutputFile(data_out, ref_out_file);
@@ -975,8 +940,6 @@ void extract_reg_data(int chr_num,
     }
   }
   data_out.close();
-  bgzf_close(fpi);
-  bgzf_close(fpd);
 }
 
 
@@ -1019,14 +982,8 @@ Rcpp::List read_reg_records(int chr_num,
   if(start_bp > end_bp)
     Rcpp::stop("ERROR: start_bp must not be greater than end_bp.");
 
-  BGZF* fpi = bgzf_open(index_data_file.c_str(), "r");
-  if(!fpi)
-    Rcpp::stop("ERROR: can't open index data file '"+index_data_file+"'");
-  BGZF* fpd = bgzf_open(reference_data_file.c_str(), "r");
-  if(!fpd){
-    bgzf_close(fpi);
-    Rcpp::stop("ERROR: can't open reference data file '"+reference_data_file+"'");
-  }
+  BgzfReader fpi(index_data_file, "index data file");
+  BgzfReader fpd(reference_data_file, "reference data file");
 
   std::vector<std::string> rsid_vec, a1_vec, a2_vec;
   std::vector<int>         chr_vec, bp_vec;
@@ -1086,8 +1043,6 @@ Rcpp::List read_reg_records(int chr_num,
       af1_flat.push_back(std::atof(fields[num_pops + k].c_str()));
   }
 
-  bgzf_close(fpi);
-  bgzf_close(fpd);
 
   int n = (int)rsid_vec.size();
   Rcpp::CharacterMatrix geno(n, num_pops);
@@ -1129,15 +1084,10 @@ Rcpp::List read_reg_records(int chr_num,
 //' @export
 // [[Rcpp::export]]
 void test_gz_file(std::string gz_file){
-  BGZF* fp = bgzf_open(gz_file.c_str(), "r");
-  if(!fp){
-    
-    Rcpp::stop("ERROR: can't open index data file '"+gz_file+"'");
-  }
+  BgzfReader fp(gz_file, "BGZF file");
   std::string line;
   BgzfGetLine(fp, line);
   Rcpp::Rcout << line << std::endl;
-  bgzf_close(fp);
 }
 
 
@@ -1147,17 +1097,12 @@ void test_gz_file(std::string gz_file){
 std::string get_geno_info(int64_t fpos,
                    std::string reference_data_file){
 
-  BGZF* fp = bgzf_open(reference_data_file.c_str(), "r");
-  if(!fp){
-    
-    Rcpp::stop("ERROR: can't open reference data file '"+reference_data_file+"'");
-  }
+  BgzfReader fp(reference_data_file, "reference data file");
   Rcpp::Rcout << "fpos: " << fpos << std::endl;
   std::string line;
   bgzf_seek(fp, fpos, SEEK_SET);
   BgzfGetLine(fp, line);
   
-  bgzf_close(fp);
   return line;
 }
 

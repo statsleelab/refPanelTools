@@ -23,6 +23,13 @@
 
 ## Bug fixes
 
+* BGZF handles were raw pointers closed only by falling off the end of a
+  function, so every `Rcpp::stop()` in between leaked the descriptor and the
+  block buffers behind it. The input validation added in this release made that
+  routine: 200 calls that failed on a malformed index line leaked 400
+  descriptors, enough for a session doing this in a loop to run out of file
+  handles. Reads now go through a scope-owned reader that closes on unwind.
+
 * `read_region()` read the entire index file with `read.table()` on every
   call, so the cost tracked the size of the index rather than the size of the
   region: a 40-SNP window cost the same as a 40,000-SNP one. The metadata it

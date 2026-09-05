@@ -88,3 +88,21 @@ test_that("a plain gzip file reports that bgzip compression is required", {
   expect_error(extract_chr_data(1, panel$num_pops, plain, panel$geno, tempfile()),
                "compressed with bgzip")
 })
+
+test_that("a failed read does not leak the BGZF handles", {
+  # bgzf_close() was only reached by falling off the end of a function, so
+  # every Rcpp::stop() in between leaked both open handles. Before the reader
+  # became scope-owned, 200 failed calls leaked 400 descriptors and a session
+  # doing this in a loop would eventually run out.
+  skip_on_os("windows")
+  skip_if_not(dir.exists("/dev/fd"))
+
+  idx <- with_index(replace(index_lines(), 2, "rs2 1 1100"), "idx_leak.gz")
+  open_fds <- function() length(list.files("/dev/fd", all.files = TRUE))
+
+  before <- open_fds()
+  for (i in seq_len(100))
+    try(extract_chr_data(1, panel$num_pops, idx, panel$geno, tempfile()),
+        silent = TRUE)
+  expect_lt(open_fds() - before, 10L)
+})
